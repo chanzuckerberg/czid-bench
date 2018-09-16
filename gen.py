@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
 
-class Genome(Object):
+class Genome(object):
 
     all = dict()
 
@@ -13,7 +13,12 @@ class Genome(Object):
         self.genbank_URL = genbank_URL
         self.key = f"{category}__{organism}__{tax_id}"
         self.filename = f"{self.key}.fasta"
-        Genome.all[key] = self
+        Genome.all[self.key] = self
+
+    @staticmethod
+    def ensure_all_present():
+        for g in Genome.all.values():
+            assert os.path.isfile(g.filename), f"Missing genome {g.filename}, please download from {g.genome_assembly_URL or f.genbank_URL}"
 
 
 TOP_6_ID_GENOMES = [
@@ -50,11 +55,13 @@ ABUNDANCES = ["uniform", "log-normal"]
 
 def main():
     print("Generating IDSEQ benchmark data.")
+    num_reads = 100 * 1000
     model = MODELS[0]
     abundance = ABUNDANCES[0]
     genome_fastas = " ".join(g.filename for g in TOP_6_ID_GENOMES)
-    command = f"iss generate --genomes {genome_fastas} --model {model} --output {model}_reads"
+    command = f"iss generate --n_reads {num_reads} --genomes {genome_fastas} --model {model} --gc_bias --output {model}_reads"
     print(command)
+    Genome.ensure_all_present()
     os.system(command)
 
 
