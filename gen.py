@@ -9,6 +9,8 @@ from multiprocessing import cpu_count
 #    pip3 install ncbi-acc-download
 #
 
+LOGICAL_VERSION = "0"
+
 QUIET = False
 
 def remove_safely(fn):
@@ -112,6 +114,8 @@ def main():
     abundance = ABUNDANCES[0]
     genome_fastas = " ".join(g.filename for g in TOP_6_ID_GENOMES)
     Genome.ensure_all_present()
+    num_organisms = len(TOP_6_ID_GENOMES)
+    num_accessions = sum(len(g.versioned_accession_ids) for g in TOP_6_ID_GENOMES)
     # TODO:  Currently each chromosome is treated as a separate organism
     # for relative abundance purposes.  Thus, organisms with greater number
     # of chromosomes will have a lot of extra weight in the mix.
@@ -119,7 +123,7 @@ def main():
     remove_safely("top_6_pathogens.fasta")
     command = f"cat {genome_fastas} > top_6_pathogens.fasta"
     check_call(command)
-    command = f"iss generate --n_reads {num_reads} --genomes top_6_pathogens.fasta --model {model} --abundance {abundance} --gc_bias --output {model}_reads --cpus {num_cpus}"
+    command = f"iss generate --n_reads {num_reads} --genomes top_6_pathogens.fasta --model {model} --abundance {abundance} --gc_bias --output no_{num_organisms}__nc_{num_accessions}__{abundance}_weight_per_chromosome__{model}_reads__v{LOGICAL_VERSION} --cpus {num_cpus}"
     check_call(command)
 
 
