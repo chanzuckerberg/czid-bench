@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import traceback
+from multiprocessing import cpu_count
 
 # Pre-requsites:
 #
@@ -105,12 +106,20 @@ ABUNDANCES = ["uniform", "log-normal"]
 
 def main():
     print("Generating IDSEQ benchmark data.")
+    num_cpus = cpu_count()
     num_reads = 100 * 1000
     model = MODELS[0]
     abundance = ABUNDANCES[0]
     genome_fastas = " ".join(g.filename for g in TOP_6_ID_GENOMES)
-    command = f"iss generate --n_reads {num_reads} --genomes {genome_fastas} --model {model} --gc_bias --output {model}_reads"
     Genome.ensure_all_present()
+    # TODO:  Currently each chromosome is treated as a separate organism
+    # for relative abundance purposes.  Thus, organisms with greater number
+    # of chromosomes will have a lot of extra weight in the mix.
+    # Probably should fix here?
+    remove_safely("top_6_pathogens.fasta")
+    command = f"cat {genome_fastas} > top_6_pathogens.fasta"
+    check_call(command)
+    command = f"iss generate --n_reads {num_reads} --genomes top_6_pathogens.fasta --model {model} --abundance {abundance} --gc_bias --output {model}_reads --cpus {num_cpus}"
     check_call(command)
 
 
