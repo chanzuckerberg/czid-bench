@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import traceback
+import gzip
 from multiprocessing import cpu_count
 
 # Pre-requsites:
@@ -9,7 +10,7 @@ from multiprocessing import cpu_count
 #    pip3 install ncbi-acc-download
 #
 
-LOGICAL_VERSION = "0"
+LOGICAL_VERSION = "1"
 
 QUIET = False
 
@@ -106,6 +107,53 @@ MODELS = ["novaseq", "miseq", "hiseq"]
 ABUNDANCES = ["uniform", "log-normal"]
 
 
+def annotate_reads_work(input_f, output_f, r):
+    # Annotate read ID by appending the consecutive read counter, and stripping the _1 or _2
+    # paired-end identifier appended by ISS;  this is required to run correctly through STAR.
+    assert len(r) == 3
+    assert r in ["_1\n", "_2\n"]
+    line_number = 1
+    try:
+        line = input_f.readline()
+        while line:
+            # The FASTQ format specifies that each read consists of 4 lines,
+            # the first of which begins with @ followed by read ID.
+            assert line[0] == "@", f"fastq format requires every 4th line to start with @"
+            assert line.endswith(r), f"fastq produced by ISS have read IDS ending with _1\\n or _2\\n"
+            zero_padded_read_count = "{:010d}".format(line_number//4)
+            augmented_header = line[:-3] + f"__{zero_padded_read_count}\n"
+            output_f.write(augmented_header.encode('utf-8'))
+            for i in range(4):
+                line = input_f.readline()
+                line_number += 1
+                if i < 3:
+                    output_f.write(line.encode('utf-8'))
+    except Exception as e:
+        e.line_number = line_number
+        raise
+
+
+def opener(filename):
+    if filename.endswith(".gz"):
+        return gzip.open
+    else:
+        return open
+
+
+def smart_open(filename, mode):
+    return opener(filename)(filename, mode)
+
+
+def annotate_reads(input_fastq, output_fastq, r):
+    try:
+        with smart_open(input_fastq, "r") as input_f:
+            with smart_open(output_fastq, "w") as output_f:
+                annotate_reads_work(input_f, output_f, r)
+    except Exception as e:
+        print(f"Error parsing line {e.line_number} in {input_fastq}.")
+        raise
+
+
 def main():
     print("Generating IDSEQ benchmark data.")
     num_cpus = cpu_count()
@@ -116,6 +164,13 @@ def main():
     Genome.ensure_all_present()
     num_organisms = len(TOP_6_ID_GENOMES)
     num_accessions = sum(len(g.versioned_accession_ids) for g in TOP_6_ID_GENOMES)
+    output_prefix = f"norg_{num_organisms}__nacc_{num_accessions}__{abundance}_weight_per_accession__{model}_reads__v{LOGICAL_VERSION}_"
+    pid = os.getpid()
+    tmp_prefix = f"tmp_{pid}"
+    tmp_files = [f"{tmp_prefix}_{r}.fastq" for r in ["R1", "R2"]]
+    output_files = [f"{output_prefix}_{r}.fastq.gz" for r in ["R1", "R2"]]
+    for f in tmp_files + output_files:
+        remove_safely(f)
     # TODO:  Currently each chromosome is treated as a separate organism
     # for relative abundance purposes.  Thus, organisms with greater number
     # of chromosomes will have a lot of extra weight in the mix.
@@ -123,8 +178,11 @@ def main():
     remove_safely("top_6_pathogens.fasta")
     command = f"cat {genome_fastas} > top_6_pathogens.fasta"
     check_call(command)
-    command = f"iss generate --n_reads {num_reads} --genomes top_6_pathogens.fasta --model {model} --abundance {abundance} --gc_bias --output no_{num_organisms}__nc_{num_accessions}__{abundance}_weight_per_chromosome__{model}_reads__v{LOGICAL_VERSION} --cpus {num_cpus}"
+    command = f"iss generate --n_reads {num_reads} --genomes top_6_pathogens.fasta --model {model} --abundance {abundance} --gc_bias --output {tmp_prefix} --cpus {num_cpus}"
     check_call(command)
+    for tmp_fastq, output_fastq, r in zip(tmp_files, output_files, ["_1\n", "_2\n"]):
+        annotate_reads(tmp_fastq, output_fastq, r)
+        remove_safely(tmp_fastq)
 
 
 if __name__ == "__main__":
