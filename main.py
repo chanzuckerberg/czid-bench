@@ -23,7 +23,7 @@ from genome import Genome
 LOGICAL_VERSION = "3"
 
 
-def augmented_read_header(line, r, line_number):
+def augment_read_header(line, r, line_number):
     assert line.endswith(r), f"fastq produced by ISS have read id's ending with _1\\n or _2\\n"
     assert len(r) == 3
     iss_read_id = line[:-3]
@@ -45,21 +45,26 @@ def annotate_reads_work(input_f, output_f, r):
             # The FASTQ format specifies that each read consists of 4 lines,
             # the first of which begins with @ followed by read ID.
             assert line[0] == "@", f"fastq format requires every 4th line to start with @"
-            output_f.write(augmented_read_header(line, r, line_number).encode('utf-8'))
+            augmented_read_header = augment_read_header(line, r, line_number)
+            output_f.write(augmented_read_header.encode('utf-8'))
             for i in range(4):
                 line = input_f.readline()
                 line_number += 1
                 if i < 3:
                     output_f.write(line.encode('utf-8'))
-    except:
-        print(f"Error parsing line {line_number} in {input_fastq}.")
+    except Exception as e:
+        e.line_number = line_number
         raise
 
 
 def annotate_reads(input_fastq, output_fastq, r):
     with smart_open(input_fastq, "r") as input_f:
         with smart_open(output_fastq, "w") as output_f:
-            annotate_reads_work(input_f, output_f, r)
+            try:
+                annotate_reads_work(input_f, output_f, r)
+            except Exception as e:
+                print(f"Error parsing line {e.line_number} in {input_fastq}.")
+                raise
 
 
 def main():
