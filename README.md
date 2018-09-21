@@ -8,7 +8,7 @@ pip3 install ncbi-acc-download
 ```
 
 # selecting organisms and chromosomes
-Add entries like this one to `params.py`.
+Add entries like this one to `params.py`
 ```
     Genome("fungi", "aspergillus_fumigatus",
            [("subspecies", 330879), ("species", 746128), ("genus", 5052), ("family", 1131492)],
