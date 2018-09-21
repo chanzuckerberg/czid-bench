@@ -20,7 +20,7 @@ from genome import Genome
 
 # Increment this as often as you like;  especially if a code change will result
 # in different content for the same output filename.
-LOGICAL_VERSION = "3"
+LOGICAL_VERSION = "4"
 
 
 def augment_read_header(line, r, line_number):
@@ -72,18 +72,25 @@ def main():
     num_cpus = cpu_count()
     num_reads = 100 * 1000
     model = MODELS[0]
-    abundance = ABUNDANCES[0]
     genome_fastas = " ".join(g.filename for g in TOP_6_ID_GENOMES)
     Genome.ensure_all_present()
     num_organisms = len(TOP_6_ID_GENOMES)
     num_accessions = sum(len(g.versioned_accession_ids) for g in TOP_6_ID_GENOMES)
-    output_prefix = f"norg_{num_organisms}__nacc_{num_accessions}__{abundance}_weight_per_accession__{model}_reads__v{LOGICAL_VERSION}_"
+    output_prefix = f"norg_{num_organisms}__nacc_{num_accessions}__uniform_weight_per_organism__{model}_reads__v{LOGICAL_VERSION}_"
     pid = os.getpid()
     tmp_prefix = f"tmp_{pid}"
     tmp_files = [f"{tmp_prefix}_{r}.fastq" for r in ["R1", "R2"]]
     output_files = [f"{output_prefix}_{r}.fastq.gz" for r in ["R1", "R2"]]
-    for f in tmp_files + output_files:
+    abundance_file = f"{tmp_prefix}_abundance.txt"
+    for f in tmp_files + output_files + [abundance_file]:
         remove_safely(f)
+    with open(abundance_file, "w") as af:
+        sum_of_weights = 0
+        for vaccid, genome in Genome.by_accid.items():
+            vaccid_weight = 1.0 / (len(genome.versioned_accession_ids) * num_organisms)
+            sum_of_weights += vaccid_weight
+            af.write(f"{vaccid} {vaccid_weight}\n")
+    assert -0.0005 < sum_of_weights - 1.0 < 0.0005, f"{sum_of_weights} != 1.0"
     # TODO:  Currently each chromosome is treated as a separate organism
     # for relative abundance purposes.  Thus, organisms with greater number
     # of chromosomes will have a lot of extra weight in the mix.
@@ -91,11 +98,12 @@ def main():
     remove_safely("top_6_pathogens.fasta")
     command = f"cat {genome_fastas} > top_6_pathogens.fasta"
     check_call(command)
-    command = f"iss generate --n_reads {num_reads} --genomes top_6_pathogens.fasta --model {model} --abundance {abundance} --gc_bias --output {tmp_prefix} --cpus {num_cpus}"
+    command = f"iss generate --n_reads {num_reads} --genomes top_6_pathogens.fasta --model {model} --abundance_file {abundance_file} --gc_bias --output {tmp_prefix} --cpus {num_cpus}"
     check_call(command)
     for tmp_fastq, output_fastq, r in zip(tmp_files, output_files, ["_1\n", "_2\n"]):
         annotate_reads(tmp_fastq, output_fastq, r)
         remove_safely(tmp_fastq)
+    remove_safely(abundance_file)
 
 
 if __name__ == "__main__":
