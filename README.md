@@ -21,6 +21,6 @@ Add entries like this one to the code
 Edit the `iss` command in `main()`.  Increment LOGICAL_VERSION (whole numbers only);  that's reflected in the output names.  If possible, include all options in the output name, because uncommitted versions are prone to clashing.
 
 # running
-python3 gen.py
+python3 main.py
 
 This produces fastq files that you can gzip and upload via IDSEQ-CLI to project Benchmarking.
