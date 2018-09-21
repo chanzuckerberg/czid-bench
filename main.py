@@ -7,6 +7,9 @@
 #    pip3 install InSilicoSeq
 #    pip3 install ncbi-acc-download
 #
+# Usage:
+#
+#    Customize params.py, then run main.py, then use idseq-cli to upload output to idseq.
 #
 import os
 from multiprocessing import cpu_count
