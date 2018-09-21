@@ -84,6 +84,8 @@ def main():
     abundance_file = f"{tmp_prefix}_abundance.txt"
     for f in tmp_files + output_files + [abundance_file]:
         remove_safely(f)
+    # Ensure each organism has equal abundance in the mix, despite of the varying
+    # numbers of chromosomes and accessions across organisms.
     with open(abundance_file, "w") as af:
         sum_of_weights = 0
         for vaccid, genome in Genome.by_accid.items():
@@ -91,10 +93,6 @@ def main():
             sum_of_weights += vaccid_weight
             af.write(f"{vaccid} {vaccid_weight}\n")
     assert -0.0005 < sum_of_weights - 1.0 < 0.0005, f"{sum_of_weights} != 1.0"
-    # TODO:  Currently each chromosome is treated as a separate organism
-    # for relative abundance purposes.  Thus, organisms with greater number
-    # of chromosomes will have a lot of extra weight in the mix.
-    # Probably should fix here?
     remove_safely("top_6_pathogens.fasta")
     command = f"cat {genome_fastas} > top_6_pathogens.fasta"
     check_call(command)
