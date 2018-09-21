@@ -10,7 +10,7 @@ from multiprocessing import cpu_count
 #    pip3 install ncbi-acc-download
 #
 
-LOGICAL_VERSION = "1"
+LOGICAL_VERSION = "3"
 
 QUIET = False
 
@@ -32,16 +32,26 @@ def check_call(command):
 class Genome(object):
 
     all = dict()
+    by_accid = dict()
 
-    def __init__(self, category, organism, tax_id, genome_assembly_URL, versioned_accession_ids=[]):
+    def __init__(self, category, organism, lineage, versioned_accession_ids, genome_assembly_URL=None):
         self.category = category
         self.organism = organism
-        self.tax_id = tax_id
+        self.lineage = lineage
+        assert ["subspecies", "species", "genus", "family"] == [l[0] for l in lineage]
+        self.subspecies_taxid, self.species_taxid, self.genus_taxid, self.family_taxid = [(l[1] or 0) for l in lineage]
+        self.taxid = self.subspecies_taxid or self.species_taxid
         self.genome_assembly_URL = genome_assembly_URL
         self.versioned_accession_ids = versioned_accession_ids
-        self.key = f"{category}__{organism}__{tax_id}"
+        self.key = f"{category}__{organism}__{self.taxid}"
         self.filename = f"{self.key}.fasta"
         Genome.all[self.key] = self
+        for accid in versioned_accession_ids:
+            vaccid = accid
+            if "." not in vaccid:
+                vaccid = accid + ".1"
+                print(f"INFO:  Changing {accid} to {vaccid} to match ISS headers.")
+            Genome.by_accid[vaccid] = self
 
     @staticmethod
     def fetch_versioned_accession_id(vaccid):  # e.g., "NC_004325.2"
@@ -72,39 +82,51 @@ class Genome(object):
 
 
 TOP_6_ID_GENOMES = [
-    Genome("bacteria",
-           "klebsiella_pneumoniae_HS11286",
-           1125630,
-           None,
+    Genome("bacteria", "klebsiella_pneumoniae_HS11286",
+           [("subspecies", 1125630), ("species", 573), ("genus", 570), ("family", 543)],
            ["NC_016845.1"]),
-    Genome("fungi",
-           "aspergillus_fumigatus",
-           330879,
-           "https://www.ncbi.nlm.nih.gov/genome/18?genome_assembly_id=22576",
-           ["NC_007194.1", "NC_007195.1", "NC_007196.1", "NC_007197.1", "NC_007198.1", "NC_007199.1", "NC_007200.1", "NC_007201.1"]),
-    Genome("viruses",
-           "rhinovirus_c",
-           463676,
-           None,
-           ["MG148341"]),
-    Genome("viruses",
-           "chikungunya",
-           37124,
-           None,
-           ["MG049915"]),
-    Genome("bacteria",
-           "staphylococcus_aureus",
-           93061,
-           "https://www.ncbi.nlm.nih.gov/genome/154?genome_assembly_id=299272",
-           ["NC_007795.1"]),
-    Genome("protista",
-           "plasmodium_falciuparum",
-           36329,
-           "https://www.ncbi.nlm.nih.gov/genome/33?genome_assembly_id=22642",
-           ["NC_004325.2", "NC_037280.1", "NC_000521.4", "NC_004318.2", "NC_004326.2", "NC_004327.3", "NC_004328.3", "NC_004329.3", "NC_004330.2", "NC_037281.1", "NC_037282.1", "NC_037284.1", "NC_004331.3", "NC_037283.1", "NC_036769.1"])
+
+    Genome("fungi", "aspergillus_fumigatus",
+           [("subspecies", 330879), ("species", 746128), ("genus", 5052), ("family", 1131492)],
+           ["NC_007194.1", "NC_007195.1", "NC_007196.1", "NC_007197.1", "NC_007198.1", "NC_007199.1",
+            "NC_007200.1", "NC_007201.1"],
+           "https://www.ncbi.nlm.nih.gov/genome/18?genome_assembly_id=22576"),
+
+    Genome("viruses", "rhinovirus_c",
+           [("subspecies", 0), ("species", 463676), ("genus", 12059), ("family", 12058)],
+           ["MG148341.1"]),
+
+    Genome("viruses", "chikungunya",
+           [("subspecies", 0), ("species", 37124), ("genus", 11019), ("family", 11018)],
+           ["MG049915.1"]),
+
+    Genome("bacteria", "staphylococcus_aureus",
+           [("subspecies", 93061), ("species", 1280), ("genus", 1279), ("family", 90964)],
+           ["NC_007795.1"],
+           "https://www.ncbi.nlm.nih.gov/genome/154?genome_assembly_id=299272"),
+
+    Genome("protista", "plasmodium_falciuparum",
+           [("subspecies", 36329), ("species", 5833), ("genus", 5820), ("family", 1639119)],
+           ["NC_004325.2", "NC_037280.1", "NC_000521.4", "NC_004318.2", "NC_004326.2",
+            "NC_004327.3", "NC_004328.3", "NC_004329.3", "NC_004330.2", "NC_037281.1",
+            "NC_037282.1", "NC_037284.1", "NC_004331.3", "NC_037283.1", "NC_036769.1"],
+           "https://www.ncbi.nlm.nih.gov/genome/33?genome_assembly_id=22642")
 ]
+
+# TODO: add model for "iseq"
 MODELS = ["novaseq", "miseq", "hiseq"]
 ABUNDANCES = ["uniform", "log-normal"]
+
+
+def augmented_read_header(line, r, line_number):
+    assert line.endswith(r), f"fastq produced by ISS have read id's ending with _1\\n or _2\\n"
+    iss_read_id = line[:-3]
+    zero_padded_read_count = "{:010d}".format(line_number // 4)
+    serial_number = f"s{zero_padded_read_count}"
+    versioned_accession_id = iss_read_id.rsplit("_", 1)[0][1:]
+    g = Genome.by_accid[versioned_accession_id]
+    benchmark_lineage = f"benchmark_lineage_{g.subspecies_taxid}_{g.species_taxid}_{g.genus_taxid}_{g.family_taxid}"
+    return f"{iss_read_id}__{benchmark_lineage}__{serial_number}\n"
 
 
 def annotate_reads_work(input_f, output_f, r):
@@ -119,10 +141,7 @@ def annotate_reads_work(input_f, output_f, r):
             # The FASTQ format specifies that each read consists of 4 lines,
             # the first of which begins with @ followed by read ID.
             assert line[0] == "@", f"fastq format requires every 4th line to start with @"
-            assert line.endswith(r), f"fastq produced by ISS have read IDS ending with _1\\n or _2\\n"
-            zero_padded_read_count = "{:010d}".format(line_number//4)
-            augmented_header = line[:-3] + f"__{zero_padded_read_count}\n"
-            output_f.write(augmented_header.encode('utf-8'))
+            output_f.write(augmented_read_header(line, r, line_number).encode('utf-8'))
             for i in range(4):
                 line = input_f.readline()
                 line_number += 1
