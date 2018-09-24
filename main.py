@@ -38,6 +38,7 @@ def augment_read_header(line, r, line_number):
 def annotate_reads_work(input_f, output_f, r):
     # Annotate read ID by appending the consecutive read counter, and stripping the _1 or _2
     # paired-end identifier appended by ISS;  this is required to run correctly through STAR.
+    # Also annotate with lineage information, that can later be used to score idseq accuracy.
     line_number = 1
     try:
         line = input_f.readline()
@@ -67,41 +68,84 @@ def annotate_reads(input_fastq, output_fastq, r):
                 raise
 
 
+def paired_files(prefix):
+    return [f"{prefix}_{r}.fastq.gz" for r in ["R1", "R2"]]
+
+
+def annotate_and_move(tmp_fastq, output_fastq):
+    for tmp_fastq, output_fastq, r in zip(tmp_files, output_files, ["_1\n", "_2\n"]):
+        annotate_reads(tmp_fastq, output_fastq, r)
+        remove_safely(tmp_fastq)
+
+
+def run_iss_single_genome(g, num_reads, model, tmp_prefix, num_cpus):
+    abundance = ABUNDANCES[0]
+    num_organisms = 1
+    num_accessions = len(g.versioned_accession_ids)
+    tmp_files = paired_files(tmp_prefix)
+    output_prefix_single_genome = f"norg_{num_organisms}__nacc_{num_accessions}__{abundance}_weight_per_accession__{model}_reads__{g.key}__v{LOGICAL_VERSION}_"
+    output_fastqs = paired_files(output_prefix_single_genome)
+    for f in tmp_files + output_files:
+        remove_safely(f)
+    iss_command_single_genome = f"iss generate --n_reads {num_reads} --genomes {g.filename} --model {model} --abundance {abundance} --gc_bias --output {tmp_prefix} --cpus {num_cpus}"
+    check_call(iss_command_single_genome)
+    annotate_and_move(tmp_fastq, output_fastq)
+
+
+def uniform_abundance_per_organism(genomes, tmp_prefix):
+    # Ensure each organism has equal abundance in the mix, despite the varying
+    # numbers of chromosomes and accessions across organisms.
+    abundance_file = f"{tmp_prefix}_abundance.txt"
+    remove_safely(abundance_file)
+    with open(abundance_file, "w") as af:
+        sum_of_weights = 0
+        for g in genomes:
+            vaccid_weight = 1.0 / (len(g.versioned_accession_ids) * len(genomes))
+            sum_of_weights += vaccid_weight
+            af.write(f"{vaccid} {vaccid_weight}\n")
+    assert -0.0005 < sum_of_weights - 1.0 < 0.0005, f"{sum_of_weights} != 1.0"
+    return abundance_file
+
+
+def concatenate_fasta(genomes, tmp_prefix):
+    genomes_file = f"{tmp_prefix}_genomes.fasta"
+    genome_fastas = " ".join(g.filename for g in genomes)
+    remove_safely(genomes_file)
+    command = f"cat {genome_fastas} > {genomes_file}"
+    check_call(command)
+    return genomes_file
+
+
+def run_iss_multiplexed(genomes, num_reads, model, tmp_prefix, num_cpus):
+    num_organisms = len(genomes)
+    num_accessions = sum(len(g.versioned_accession_ids) for g in genomes)
+    output_prefix_multiplexed = f"norg_{num_organisms}__nacc_{num_accessions}__uniform_weight_per_organism__{model}_reads__v{LOGICAL_VERSION}_"
+    output_files = paired_files(output_prefix_multiplexed)
+    tmp_files = paired_files(tmp_prefix)
+    for f in tmp_files + output_files:
+        remove_safely(f)
+    abundance_file = uniform_abundance_per_organism(genomes, tmp_prefix)
+    genomes_file = concatenate_fasta(genomes)
+    iss_multiplexed_command = f"iss generate --n_reads {num_reads} --genomes {genomes_file} --model {model} --abundance_file {abundance_file} --gc_bias --output {tmp_prefix} --cpus {num_cpus}"
+    check_call(iss_multiplexed_command)
+    annotate_and_move(tmp_fastq, output_fastq)
+    remove_safely(abundance_file)
+    remove_safely(genomes_file)
+
+
 def main():
     print("Generating IDSEQ benchmark data.")
     num_cpus = cpu_count()
     num_reads = 100 * 1000
-    model = MODELS[0]
-    genome_fastas = " ".join(g.filename for g in TOP_6_ID_GENOMES)
     Genome.ensure_all_present()
-    num_organisms = len(TOP_6_ID_GENOMES)
-    num_accessions = sum(len(g.versioned_accession_ids) for g in TOP_6_ID_GENOMES)
-    output_prefix = f"norg_{num_organisms}__nacc_{num_accessions}__uniform_weight_per_organism__{model}_reads__v{LOGICAL_VERSION}_"
     pid = os.getpid()
     tmp_prefix = f"tmp_{pid}"
-    tmp_files = [f"{tmp_prefix}_{r}.fastq" for r in ["R1", "R2"]]
-    output_files = [f"{output_prefix}_{r}.fastq.gz" for r in ["R1", "R2"]]
-    abundance_file = f"{tmp_prefix}_abundance.txt"
-    for f in tmp_files + output_files + [abundance_file]:
-        remove_safely(f)
-    # Ensure each organism has equal abundance in the mix, despite of the varying
-    # numbers of chromosomes and accessions across organisms.
-    with open(abundance_file, "w") as af:
-        sum_of_weights = 0
-        for vaccid, genome in Genome.by_accid.items():
-            vaccid_weight = 1.0 / (len(genome.versioned_accession_ids) * num_organisms)
-            sum_of_weights += vaccid_weight
-            af.write(f"{vaccid} {vaccid_weight}\n")
-    assert -0.0005 < sum_of_weights - 1.0 < 0.0005, f"{sum_of_weights} != 1.0"
-    remove_safely("top_6_pathogens.fasta")
-    command = f"cat {genome_fastas} > top_6_pathogens.fasta"
-    check_call(command)
-    command = f"iss generate --n_reads {num_reads} --genomes top_6_pathogens.fasta --model {model} --abundance_file {abundance_file} --gc_bias --output {tmp_prefix} --cpus {num_cpus}"
-    check_call(command)
-    for tmp_fastq, output_fastq, r in zip(tmp_files, output_files, ["_1\n", "_2\n"]):
-        annotate_reads(tmp_fastq, output_fastq, r)
-        remove_safely(tmp_fastq)
-    remove_safely(abundance_file)
+    # First, generate a separate benchmark for each genome.
+    for model in MODELS:
+        for g in TOP_6_ID_GENOMES:
+            run_iss_single_genome(g, num_reads, model, tmp_prefix, num_cpus)
+        # Then generate a multiplexed benchmark.
+        run_iss_multiplexed(TOP_6_ID_GENOMES, num_reads, model, tmp_prefix, num_cpus)
 
 
 if __name__ == "__main__":

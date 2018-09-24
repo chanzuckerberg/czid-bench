@@ -15,16 +15,20 @@ class Genome(object):
         self.subspecies_taxid, self.species_taxid, self.genus_taxid, self.family_taxid = [(l[1] or 0) for l in lineage]
         self.taxid = self.subspecies_taxid or self.species_taxid
         self.genome_assembly_URL = genome_assembly_URL
-        self.versioned_accession_ids = versioned_accession_ids
+        self.versioned_accession_ids = [Genome.ensure_versioned(vaccid) for vaccid in versioned_accession_ids]
         self.key = f"{category}__{organism}__{self.taxid}"
         self.filename = f"{self.key}.fasta"
         Genome.all[self.key] = self
-        for accid in versioned_accession_ids:
-            vaccid = accid
-            if "." not in vaccid:
-                vaccid = accid + ".1"
-                print(f"INFO:  Changing {accid} to {vaccid} to match ISS headers.")
+        for vaccid in self.versioned_accession_ids:
+            assert vaccid not in Genome.by_accid, "Accession ID {vaccid} should not occur in multiple genomes."
             Genome.by_accid[vaccid] = self
+
+    @staticmethod
+    def ensure_versioned(vaccid):
+        if "." not in vaccid:
+            vaccid += ".1"
+            print(f"INFO:  Changed {vaccid[:-2]} to {vaccid} in order to match ISS-generated read headers.")
+        return vaccid
 
     @staticmethod
     def fetch_versioned_accession_id(vaccid):  # e.g., "NC_004325.2"
