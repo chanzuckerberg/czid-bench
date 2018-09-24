@@ -12,6 +12,7 @@
 #    Customize params.py, then run main.py, then use idseq-cli to upload output to idseq.
 #
 import os
+import time
 from multiprocessing import cpu_count
 from util import remove_safely, check_call, smart_open
 from params import MODELS, ABUNDANCES, TOP_6_ID_GENOMES
@@ -84,6 +85,7 @@ def run_iss_single_genome(g, num_reads, model, tmp_prefix, num_cpus):
     num_accessions = len(g.versioned_accession_ids)
     tmp_files = paired_files(tmp_prefix)
     output_prefix_single_genome = f"norg_{num_organisms}__nacc_{num_accessions}__{abundance}_weight_per_accession__{model}_reads__{g.key}__v{LOGICAL_VERSION}_"
+    print("GENERATING {output_prefix_single_genome} WITH {num_reads} READS.")
     output_fastqs = paired_files(output_prefix_single_genome)
     for f in tmp_files + output_files:
         remove_safely(f)
@@ -120,6 +122,7 @@ def run_iss_multiplexed(genomes, num_reads, model, tmp_prefix, num_cpus):
     num_organisms = len(genomes)
     num_accessions = sum(len(g.versioned_accession_ids) for g in genomes)
     output_prefix_multiplexed = f"norg_{num_organisms}__nacc_{num_accessions}__uniform_weight_per_organism__{model}_reads__v{LOGICAL_VERSION}_"
+    print("GENERATING {output_prefix_multiplexed} WITH {num_reads} READS.")
     output_files = paired_files(output_prefix_multiplexed)
     tmp_files = paired_files(tmp_prefix)
     for f in tmp_files + output_files:
@@ -140,12 +143,25 @@ def main():
     Genome.ensure_all_present()
     pid = os.getpid()
     tmp_prefix = f"tmp_{pid}"
-    # First, generate a separate benchmark for each genome.
+    total_reads = num_reads * (1 + len(TOP_6_ID_GENOMES))
+    reads_generated_so_far = 0
+    t_start = time.time()
+    def tick():
+        t_elapsed = time.time() - t_start
+        t_remaining = (t_elapsed / reads_generated_so_far) * total_reads
+        t_eta = t_start + t_remaining
+        t_eta_str = time.strftime("%H:%M:%S", time.localtime(t_eta))
+        print(f"{3.1f:reads_so_far/total_reads*100:3.1f} percent done, {t_remaining/60:3.1f} minutes remaining, ETA {t_eta_str}")
     for model in MODELS:
+        # First, generate a separate benchmark for each genome.
         for g in TOP_6_ID_GENOMES:
             run_iss_single_genome(g, num_reads, model, tmp_prefix, num_cpus)
+            reads_generated_so_far += num_reads
+            tick()
         # Then generate a multiplexed benchmark.
         run_iss_multiplexed(TOP_6_ID_GENOMES, num_reads, model, tmp_prefix, num_cpus)
+        reads_generated_so_far += num_reads
+        tick()
 
 
 if __name__ == "__main__":
