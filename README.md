@@ -14,8 +14,7 @@ pip3 install ncbi-acc-download
 python3 main.py
 ```
 
-This produces zipped fastq files that you can upload via [IDSEQ-CLI](https://github.com/chanzuckerberg/idseq-cli)
-to project Benchmarking.
+This produces zipped fastq files that you can upload to the [IDSeq Portal](https://idseq.net) via [IDSEQ-CLI](https://github.com/chanzuckerberg/idseq-cli).
 
 
 # selecting organisms and chromosomes
