@@ -10,7 +10,9 @@ pip3 install ncbi-acc-download
 ```
 
 # running
+```
 python3 main.py
+```
 
 This produces zipped fastq files that you can upload via [IDSEQ-CLI](https://github.com/chanzuckerberg/idseq-cli)
 to project Benchmarking.
@@ -27,7 +29,7 @@ Add/modify entries like this in `params.py`
 ```
 
 # tweaking InSilicoSeq options
-Edit `params.py` or `main.py` as desired, e.g., to select a different set of error models.
+Edit [params.py](params.py) or [main.py](main.py) as desired, e.g., to select a different set of error models.
 
 Ensure the output name reflects all chosen params.  If the output data changes,
 we expect the output file name to change as well.  It's always a good idea to increment
