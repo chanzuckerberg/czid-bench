@@ -36,7 +36,7 @@ norg_6__nacc_27__uniform_weight_per_organism__hiseq_reads__v4__[R1, R2].fastq.gz
   -- number of organisms: 6
   -- number of accessions: 27
   -- distribution: uniform per organism
-  -- error model: [hiseq] (https://insilicoseq.readthedocs.io/en/latest/iss/model.html)
+  -- error model: hiseq
   -- logical version: 4
 ```
 If the output data changes, we expect the output file name to change as well.  It's always a good idea to increment
