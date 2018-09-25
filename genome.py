@@ -18,6 +18,8 @@ class Genome(object):
         self.versioned_accession_ids = [Genome.ensure_versioned(vaccid) for vaccid in versioned_accession_ids]
         self.key = f"{category}__{organism}__{self.taxid}"
         self.filename = f"{self.key}.fasta"
+        # The size (number of bases) is filled in by fetch_all()
+        self.size = None
         Genome.all[self.key] = self
         for vaccid in self.versioned_accession_ids:
             assert vaccid not in Genome.by_accid, "Accession ID {vaccid} should not occur in multiple genomes."
@@ -45,7 +47,7 @@ class Genome(object):
         return output_file
 
     @staticmethod
-    def ensure_all_present():
+    def fetch_all():
         for g in Genome.all.values():
             remove_safely(g.filename)
             accession_fas = []
@@ -56,3 +58,9 @@ class Genome(object):
             command = f"cat {accession_fastas} > {g.filename}"
             check_call(command)
             assert os.path.isfile(g.filename), f"Failed to download genome {g.filename}"
+            command = f"grep -v '^>' {g.filename} | tr -d '\n' | wc > {g.key}.size"
+            check_call(command)
+            with open(f"{g.key}.size") as f:
+                line = f.readline().rstrip()
+                g.size = int(line.split()[2])
+            print(f"Genome {g.key} size {g.size} bases.")

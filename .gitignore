@@ -1,3 +1,14 @@
+# Generated files
+norg_[0-9]*
+tmp_[0-9]*
+*.fastq
+*.fasta
+*.fa
+*.fastq.gz
+*.fasta.gz
+*.fa.gz
+*.size
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

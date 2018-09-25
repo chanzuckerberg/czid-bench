@@ -3,7 +3,12 @@ from genome import Genome
 
 # TODO: train "iseq" model
 MODELS = ["novaseq", "miseq", "hiseq"]
-ABUNDANCES = ["uniform", "log-normal"]
+
+# We're committed to uniform.
+UNIFORM_ABUNDANCE = "uniform"
+
+# 2x this for a pair
+READ_SIZE = 150
 
 
 TOP_6_ID_GENOMES = [
