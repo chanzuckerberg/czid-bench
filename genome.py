@@ -15,16 +15,22 @@ class Genome(object):
         self.subspecies_taxid, self.species_taxid, self.genus_taxid, self.family_taxid = [(l[1] or 0) for l in lineage]
         self.taxid = self.subspecies_taxid or self.species_taxid
         self.genome_assembly_URL = genome_assembly_URL
-        self.versioned_accession_ids = versioned_accession_ids
+        self.versioned_accession_ids = [Genome.ensure_versioned(vaccid) for vaccid in versioned_accession_ids]
         self.key = f"{category}__{organism}__{self.taxid}"
         self.filename = f"{self.key}.fasta"
+        # The size (number of bases) is filled in by fetch_all()
+        self.size = None
         Genome.all[self.key] = self
-        for accid in versioned_accession_ids:
-            vaccid = accid
-            if "." not in vaccid:
-                vaccid = accid + ".1"
-                print(f"INFO:  Changing {accid} to {vaccid} to match ISS headers.")
+        for vaccid in self.versioned_accession_ids:
+            assert vaccid not in Genome.by_accid, "Accession ID {vaccid} should not occur in multiple genomes."
             Genome.by_accid[vaccid] = self
+
+    @staticmethod
+    def ensure_versioned(vaccid):
+        if "." not in vaccid:
+            vaccid += ".1"
+            print(f"INFO:  Changed {vaccid[:-2]} to {vaccid} in order to match ISS-generated read headers.")
+        return vaccid
 
     @staticmethod
     def fetch_versioned_accession_id(vaccid):  # e.g., "NC_004325.2"
@@ -41,7 +47,7 @@ class Genome(object):
         return output_file
 
     @staticmethod
-    def ensure_all_present():
+    def fetch_all():
         for g in Genome.all.values():
             remove_safely(g.filename)
             accession_fas = []
@@ -52,3 +58,9 @@ class Genome(object):
             command = f"cat {accession_fastas} > {g.filename}"
             check_call(command)
             assert os.path.isfile(g.filename), f"Failed to download genome {g.filename}"
+            command = f"grep -v '^>' {g.filename} | tr -d '\n' | wc > {g.key}.size"
+            check_call(command)
+            with open(f"{g.key}.size") as f:
+                line = f.readline().rstrip()
+                g.size = int(line.split()[2])
+            print(f"Genome {g.key} size {g.size} bases.")

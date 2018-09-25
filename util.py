@@ -1,19 +1,15 @@
 import os
 import gzip
-import traceback
 
 
 def remove_safely(fn):
-    try:
-        if os.path.isfile(fn):
-            os.remove(fn)
-    except:
-        print(f"Ignoring exception {traceback.format_exc()}")
+    if os.path.isfile(fn):
+        os.remove(fn)
 
 
 def check_call(command, quiet=False):
     if not quiet:
-        print(command)
+        print(repr(command))
     exitcode = os.system(command)
     assert exitcode == 0, f"Command failed: {command}"
 
