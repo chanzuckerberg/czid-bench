@@ -30,7 +30,7 @@ Add/modify entries like this in `params.py`
 # tweaking InSilicoSeq options
 Edit [params.py](params.py) or [main.py](main.py) as desired, e.g., to select a different set of [error models](https://insilicoseq.readthedocs.io/en/latest/iss/model.html).
 
-The output name should reflect the chosen params, like so:
+Each output file name reflects the params of its generation, like so:
 ```
 norg_6__nacc_27__uniform_weight_per_organism__hiseq_reads__v4__[R1, R2].fastq.gz
   -- number of organisms: 6
