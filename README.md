@@ -49,6 +49,8 @@ We generate a summary file for each pair of fastqs, indicating read counts per o
 and the average coverage of the organism's genome.  Each pair counts as 2 reads / 300 bases,
 matching InSilicoSeq and IDSeq conventions.
 ```
+READS  COVERAGE    LINEAGE                                          GENOME
+----------------------------------------------------------------------------------------------------------------------
 16656    215.3x    benchmark_lineage_0_37124_11019_11018            viruses__chikungunya__37124
 16594      0.1x    benchmark_lineage_330879_746128_5052_1131492     fungi__aspergillus_fumigatus__330879
 16564    352.1x    benchmark_lineage_0_463676_12059_12058           viruses__rhinovirus_c__463676
