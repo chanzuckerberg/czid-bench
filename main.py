@@ -16,13 +16,13 @@ import time
 from multiprocessing import cpu_count
 from collections import defaultdict
 from util import remove_safely, check_call, smart_open
-from params import MODELS, UNIFORM_ABUNDANCE, READ_SIZE, TOP_6_ID_GENOMES
+from params import MODELS, UNIFORM_ABUNDANCE, READ_SIZE, TOP_6_ID_GENOMES, NUM_READS
 from genome import Genome
 
 
 # Increment this as often as you like;  especially if a code change will result
 # in different content for the same output filename.
-LOGICAL_VERSION = "4"
+LOGICAL_VERSION = "5"
 
 class ISSRunContext(object):
     "Execution context for each InsilicoSeq run.  Encapsulates all temp/intermediate/output files, but not the logic."
@@ -178,7 +178,7 @@ def run_iss_multiplexed(genomes, num_reads, model, tmp_prefix, num_cpus):
 def main():
     print("Generating IDSEQ benchmark data.")
     num_cpus = cpu_count()
-    num_reads = 100 * 1000
+    num_reads = NUM_READS
     Genome.fetch_all()
     pid = os.getpid()
     tmp_prefix = f"tmp_{pid}"

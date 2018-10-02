@@ -1,8 +1,9 @@
 from genome import Genome
 
+NUM_READS = 60 * 1000
 
 # TODO: train "iseq" model
-MODELS = ["novaseq", "miseq", "hiseq"]
+MODELS = ["hiseq"] # ["novaseq", "miseq", "hiseq"]
 
 # We're committed to uniform.
 UNIFORM_ABUNDANCE = "uniform"
