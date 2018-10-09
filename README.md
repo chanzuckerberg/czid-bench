@@ -69,3 +69,5 @@ that read was sourced from, like so:
 ```
 This is helpful in tracking reads through complex bioinformatic pipelines and
 scoring results.  We assume the pipelines would not cheat by inspecting those tags.
+
+An even more detailed summary, including all ISS options, is generated in json format.
