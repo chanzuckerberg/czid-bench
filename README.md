@@ -11,7 +11,9 @@ pip3 install ncbi-acc-download
 
 # running
 ```
-python3 main.py
+mkdir mytest
+cd mytest
+python3 ../main.py
 ```
 
 This produces zipped fastq files that you can upload to the [IDSeq Portal](https://idseq.net) via [IDSEQ-CLI](https://github.com/chanzuckerberg/idseq-cli).
