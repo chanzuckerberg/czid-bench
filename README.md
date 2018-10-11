@@ -11,13 +11,10 @@ pip3 install ncbi-acc-download
 
 # running
 ```
-mkdir mytest
-cd mytest
 python3 ../main.py
 ```
 
 This produces zipped fastq files that you can upload to the [IDSeq Portal](https://idseq.net) via [IDSEQ-CLI](https://github.com/chanzuckerberg/idseq-cli).
-
 
 # selecting organisms and chromosomes
 Add/modify entries like this in `params.py`
@@ -71,3 +68,8 @@ This is helpful in tracking reads through complex bioinformatic pipelines and
 scoring results.  We assume the pipelines would not cheat by inspecting those tags.
 
 An even more detailed summary, including all ISS options, is generated in json format.
+
+# use in IDSeq automated testing
+
+For use in IDSeq Portal automated testing, just upload an output folder to s3://idseq-bench/<number> and add
+an entry for it to s3://idseq-bench/config.json.
