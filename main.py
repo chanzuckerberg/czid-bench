@@ -46,6 +46,9 @@ class ISSRunContext:
             self.is_reproducible = True
             self.idseq_bench_command = " ".join(sys.argv)
             if ISSRunContext.git_commit_hash == None:
+                # TODO:  We should actually require a git branch in github and confirm
+                # remote matches local, so that whenever parameters are changed there
+                # is a permanent record in github.
                 ISSRunContext.git_commit_hash = get_git_hash()
         else:
             print("***************************************************************************************************")
