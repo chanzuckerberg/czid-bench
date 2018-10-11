@@ -1,6 +1,6 @@
 from genome import Genome
 
-NUM_READS = 10 * 1000
+NUM_READS = 60 * 1000
 
 # TODO: train "iseq" model
 MODELS = ["hiseq"] # ["novaseq", "miseq", "hiseq"]

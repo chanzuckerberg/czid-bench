@@ -24,7 +24,7 @@ from genome import Genome
 
 # Increment this as often as you like;  especially if a code change will result
 # in different content for the same output filename.
-LOGICAL_VERSION = "6"
+LOGICAL_VERSION = "7"
 
 
 IRREPRODUCIBLE = any("irreproducible" in arg for arg in sys.argv)
