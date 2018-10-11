@@ -32,6 +32,8 @@ Edit [params.py](params.py) or [main.py](main.py) as desired, e.g., to select a 
 If the output data changes, we expect the output file name to change as well.  It's always a good idea to increment
 LOGICAL_VERSION (whole numbers only) after making changes to the code.
 
+If your code or paramter changes are uncommitted, the program will refuse to run.   You can force it to run with the `--irreproducible` flag, but irreproducible outputs cannot be used for automated testing of the IDSeq Portal.
+
 # interpreting the output
 Each output file name reflects the params of its generation, like so:
 ```
@@ -69,7 +71,7 @@ scoring results.  We assume the pipelines would not cheat by inspecting those ta
 
 An even more detailed summary, including all ISS options, is generated in json format.
 
-# automated testing of [IDSeq Portal](https://idseq.net)
+# automated testing of IDSeq Portal
 
 Just upload an output folder to `s3://idseq-bench/next-number` and add
 an entry for it to `s3://idseq-bench/config.json` to specify frequency and environments in which that test should run.
