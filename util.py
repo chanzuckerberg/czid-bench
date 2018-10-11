@@ -17,5 +17,4 @@ def check_call(command, quiet=False):
 def smart_open(filename, mode):
     if filename.endswith(".gz"):
         return gzip.open(filename, mode)
-    else:
-        return open(filename, mode)
+    return open(filename, mode)

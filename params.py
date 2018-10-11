@@ -1,15 +1,12 @@
 from genome import Genome
 
-NUM_READS = 60 * 1000
+NUM_READS = 10 * 1000
 
 # TODO: train "iseq" model
 MODELS = ["hiseq"] # ["novaseq", "miseq", "hiseq"]
 
 # We're committed to uniform.
 UNIFORM_ABUNDANCE = "uniform"
-
-# 2x this for a pair
-READ_SIZE = 150
 
 
 TOP_6_ID_GENOMES = [

@@ -12,37 +12,63 @@
 #    Customize params.py, then run main.py, then use idseq-cli to upload output to idseq.
 #
 import os
+import sys
 import time
 import json
 from multiprocessing import cpu_count
 from collections import defaultdict
 from util import remove_safely, check_call, smart_open
-from params import MODELS, UNIFORM_ABUNDANCE, READ_SIZE, TOP_6_ID_GENOMES, NUM_READS
+from params import MODELS, UNIFORM_ABUNDANCE, TOP_6_ID_GENOMES, NUM_READS
 from genome import Genome
 
 
 # Increment this as often as you like;  especially if a code change will result
 # in different content for the same output filename.
-LOGICAL_VERSION = "5"
+LOGICAL_VERSION = "6"
+
+
+IRREPRODUCIBLE = any("irreproducible" in arg for arg in sys.argv)
+if IRREPRODUCIBLE:
+    LOGICAL_VERSION += "irreproducible"
+
 
 class ISSRunContext:
     "Execution context for each InsilicoSeq run.  Encapsulates all temp/intermediate/output files, but not the logic."
 
+    git_commit_hash = None
+    iss_version = None
+
     def __init__(self, tmp_prefix, output_prefix):
         print(f"GENERATING {output_prefix}__[R1, R2]")
+        if ISSRunContext.iss_version == None:
+            ISSRunContext.iss_version = get_iss_version()
+        if not IRREPRODUCIBLE:
+            self.is_reproducible = True
+            self.idseq_bench_command = " ".join(sys.argv)
+            if ISSRunContext.git_commit_hash == None:
+                ISSRunContext.git_commit_hash = get_git_hash()
+        else:
+            print("***************************************************************************************************")
+            print("*  WARNING:  OUTPUT WILL NOT BE REPRODUCIBLE AND WILL BE REJECTED BY IDSEQ PORTAL PRODUCTION ENV  *")
+            print("***************************************************************************************************")
+            self.is_reproducible = False
+            self.idseq_bench_command = "irreproducible"
+            ISSRunContext.git_commit_hash = "irreproducible"
+        subdir = "v" + LOGICAL_VERSION + "/" + output_prefix[:-1]
         def paired_files(prefix, suffix):
-            return [f"{prefix}_{r}.{suffix}" for r in ["R1", "R2"]]
+            return [f"{subdir}/{prefix}_{r}.{suffix}" for r in ["R1", "R2"]]
+        self.subdir = subdir
         self.output_files = paired_files(output_prefix, "fastq.gz")
         self.tmp_files = paired_files(tmp_prefix, "fastq")
-        self.metadata_file_txt = output_prefix[:-1] + "__metadata.txt"
-        self.metadata_file_json = output_prefix[:-1] + "__metadata.json"
-        self.abundance_file = f"{tmp_prefix}_abundance.txt"
-        self.genomes_file = f"{tmp_prefix}_genomes.fasta"
-        self.iss_version = get_iss_version()
+        self.summary_file_txt = subdir + "/summary.txt"
+        self.metadata_file_json = subdir + "/metadata.json"
+        self.abundance_file = f"{subdir}/{tmp_prefix}_abundance.txt"
+        self.genomes_file = f"{subdir}/{tmp_prefix}_genomes.fasta"
         self.clean_slate()
 
     def clean_slate(self):
-        for f in self.tmp_files + self.output_files + [self.metadata_file_txt, self.metadata_file_json, self.abundance_file, self.genomes_file]:
+        os.makedirs(self.subdir, exist_ok=True)
+        for f in self.tmp_files + self.output_files + [self.summary_file_txt, self.metadata_file_json, self.abundance_file, self.genomes_file]:
             remove_safely(f)
 
     def remove_intermediate_and_temp_files(self):
@@ -53,7 +79,7 @@ class ISSRunContext:
         self.remove_intermediate_and_temp_files()
 
 
-class ProgressTracker(object):
+class ProgressTracker:
 
     def __init__(self, target):
         self.target = target
@@ -77,7 +103,7 @@ def benchmark_lineage_tag(g):
     return f"benchmark_lineage_{g.subspecies_taxid}_{g.species_taxid}_{g.genus_taxid}_{g.family_taxid}"
 
 
-def augment_and_count_read_header(line, r, line_number, counters):
+def augment_and_count_read_header(line, r, line_number):
     assert line.endswith(r), f"fastq produced by ISS have read id's ending with _1\\n or _2\\n"
     assert len(r) == 3
     iss_read_id = line[:-3]
@@ -86,11 +112,10 @@ def augment_and_count_read_header(line, r, line_number, counters):
     versioned_accession_id = iss_read_id.rsplit("_", 1)[0][1:]
     g = Genome.by_accid[versioned_accession_id]
     benchmark_lineage = benchmark_lineage_tag(g)
-    counters[g.key] += 1
-    return f"{iss_read_id}__{benchmark_lineage}__{serial_number}\n"
+    return f"{iss_read_id}__{benchmark_lineage}__{serial_number}\n", g.key
 
 
-def annotate_and_count_reads(input_fastq, output_fastq, r, counters):
+def annotate_and_count_reads(input_fastq, output_fastq, r, counters, accumulators):
     """Annotate read IDs by appending the consecutive read counter, after stripping
     that _1 or _2  paired-end indicator appended by ISS.  Required to run correctly
     through STAR.  Also annotate with lineage information, that can later be used
@@ -104,14 +129,17 @@ def annotate_and_count_reads(input_fastq, output_fastq, r, counters):
                 # The FASTQ format specifies that each read consists of 4 lines,
                 # the first of which begins with @ followed by read ID.
                 assert line[0] == "@", f"fastq format requires every 4th line to start with @"
-                augmented_read_header = augment_and_count_read_header(line, r, line_number, counters)
+                augmented_read_header, g_key = augment_and_count_read_header(line, r, line_number)
+                counters[g_key] += 1
                 output_f.write(augmented_read_header.encode('utf-8'))
                 for i in range(4):
                     line = input_f.readline()
                     line_number += 1
+                    if i == 0:
+                        accumulators[g_key] += (len(line) - 1)
                     if i < 3:
                         output_f.write(line.encode('utf-8'))
-        except Exception as e:
+        except Exception as _:
             print(f"Error parsing line {line_number} in {input_fastq}.")
             raise
 
@@ -121,34 +149,40 @@ def chop(txt, suffix):
     return txt[:-len(suffix)]
 
 
-def output_summary_counters(rc, iss_command, counters):
+def output_summary_counters(rc, iss_command, counters, accumulators):
     contents = []
     total_reads = 0
-    with smart_open(rc.metadata_file_txt, "w") as mft:
-        headers = "READ_COUNT\tCOVERAGE\tLINEAGE\tGENOME\n"
+    with smart_open(rc.summary_file_txt, "w") as mft:
+        headers = "READ_COUNT\tREAD_SIZE\tCOVERAGE\tLINEAGE\tGENOME\n"
         mft.write(headers)
         print("")
         print(headers)
         for g_key, read_count in sorted(counters.items(), key=lambda pair: pair[1], reverse=True):
             g = Genome.all[g_key]
             benchmark_lineage = benchmark_lineage_tag(g)
-            coverage = read_count * READ_SIZE / g.size
-            summary_line = f"{read_count}\t{coverage:3.1f}x\t{benchmark_lineage}\t{g.key}\n"
+            coverage = accumulators[g.key] / g.size
+            read_size = accumulators[g.key] / read_count
+            summary_line = f"{read_count}\t{read_size}\t{coverage:3.1f}x\t{benchmark_lineage}\t{g.key}\n"
             print(summary_line)
             mft.write(summary_line)
             contents.append({
                 'genome': g.key,
                 'benchmark_lineage': benchmark_lineage,
                 'coverage': coverage,
-                'read_count': read_count
+                'read_count': read_count,
+                'read_size' : read_size,
+                'genome_size': g.size
             })
             total_reads += read_count
     metadata = {
         "iss_version": rc.iss_version,
         "iss_command": iss_command,
+        "idseq_bench_command": rc.idseq_bench_command,
+        "idseq_bench_git_hash": ISSRunContext.git_commit_hash,
+        "idseq_bench_reproducible": rc.is_reproducible,
         "idseq_bench_version": LOGICAL_VERSION,
-        "prefix": chop(rc.metadata_file_json, "__metadata.json"),
-        "fastqs": rc.output_files,
+        "prefix": os.path.basename(rc.subdir),
+        "fastqs": [os.path.basename(f) for f in rc.output_files],
         "verified_total_reads": total_reads,
         "verified_contents": contents
     }
@@ -167,12 +201,28 @@ def get_iss_version():
     return iss_version
 
 
+def get_git_hash():
+    no_changes = os.system("git status --porcelain | grep .")
+    assert no_changes, "You have uncommitted changes.  Please commit and push to a github branch first.  Or use --irreproducible flag."
+    remove_safely("git_status.txt")
+    try:
+        check_call("git log | head -1 > git_status.txt")
+        with open("git_status.txt", "r") as gsf:
+            git_commit = gsf.readline().strip()
+    finally:
+        remove_safely("git_status.txt")
+    assert git_commit.startswith("commit ") and len(git_commit) == 47, "could not find git commit hash;  use --irreproducible flag."
+    _, commit_hash = git_commit.split()
+    return commit_hash
+
+
 def run_iss(rc, iss_command):
     check_call(iss_command)
     counters = defaultdict(int)
+    accumulators = defaultdict(int)
     for tmp_fastq, output_fastq, r in zip(rc.tmp_files, rc.output_files, ["_1\n", "_2\n"]):
-        annotate_and_count_reads(tmp_fastq, output_fastq, r, counters)
-    output_summary_counters(rc, iss_command, counters)
+        annotate_and_count_reads(tmp_fastq, output_fastq, r, counters, accumulators)
+    output_summary_counters(rc, iss_command, counters, accumulators)
     rc.cleanup()
 
 
@@ -181,8 +231,8 @@ def run_iss_single_genome(g, num_reads, model, tmp_prefix, num_cpus):
     num_accessions = len(g.versioned_accession_ids)
     abundance = UNIFORM_ABUNDANCE
     output_prefix_single_genome = f"norg_{num_organisms}__nacc_{num_accessions}__{abundance}_weight_per_accession__{model}_reads__{g.key}__v{LOGICAL_VERSION}_"
-    iss_command_single_genome = f"iss generate --n_reads {num_reads} --genomes {g.filename} --model {model} --abundance {abundance} --gc_bias --output {tmp_prefix} --cpus {num_cpus}"
     rc = ISSRunContext(tmp_prefix, output_prefix_single_genome)
+    iss_command_single_genome = f"iss generate --n_reads {num_reads} --genomes {g.filename} --model {model} --abundance {abundance} --gc_bias --output {rc.subdir}/{tmp_prefix} --cpus {num_cpus}"
     run_iss(rc, iss_command_single_genome)
 
 
@@ -212,7 +262,7 @@ def run_iss_multiplexed(genomes, num_reads, model, tmp_prefix, num_cpus):
     rc = ISSRunContext(tmp_prefix, output_prefix_multiplexed)
     uniform_abundance_per_organism(genomes, rc.abundance_file)
     concatenate_fasta(genomes, rc.genomes_file)
-    iss_multiplexed_command = f"iss generate --n_reads {num_reads} --genomes {rc.genomes_file} --model {model} --abundance_file {rc.abundance_file} --gc_bias --output {tmp_prefix} --cpus {num_cpus}"
+    iss_multiplexed_command = f"iss generate --n_reads {num_reads} --genomes {rc.genomes_file} --model {model} --abundance_file {rc.abundance_file} --gc_bias --output {rc.subdir}/{tmp_prefix} --cpus {num_cpus}"
     run_iss(rc, iss_multiplexed_command)
 
 
