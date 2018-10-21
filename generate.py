@@ -13,18 +13,17 @@
 #
 import os
 import sys
-import time
 import json
 from multiprocessing import cpu_count
 from collections import defaultdict
-from util import remove_safely, check_call, smart_open
+from util import remove_safely, check_call, smart_open, chop, ProgressTracker
 from params import MODELS, UNIFORM_ABUNDANCE, TOP_6_ID_GENOMES, NUM_READS
 from genome import Genome
 
 
 # Increment this as often as you like;  especially if a code change will result
 # in different content for the same output filename.
-LOGICAL_VERSION = "7"
+LOGICAL_VERSION = "8"
 
 
 IRREPRODUCIBLE = any("irreproducible" in arg for arg in sys.argv)
@@ -82,37 +81,19 @@ class ISSRunContext:
         self.remove_intermediate_and_temp_files()
 
 
-class ProgressTracker:
-
-    def __init__(self, target):
-        self.target = target
-        self.current = 0
-        self.t_start = time.time()
-
-    def advance(self, amount):
-        PESSIMISM = 2.0
-        self.current += amount
-        t_elapsed = time.time() - self.t_start
-        t_remaining = (t_elapsed / self.current) * self.target - t_elapsed
-        t_remaining *= PESSIMISM
-        t_eta = self.t_start + t_elapsed + t_remaining
-        t_eta_str = time.strftime("%H:%M:%S", time.localtime(t_eta))
-        print(f"*** {self.current/self.target*100:3.1f} percent done, {t_elapsed/60:3.1f} minutes elapsed, {t_remaining/60:3.1f} minutes remaining, ETA {t_eta_str} ***\n")
-
-
-
 def benchmark_lineage_tag(g):
     # TODO:  Make double-blind so the tools can't cheat by inspecting these tags? :)
     return f"benchmark_lineage_{g.subspecies_taxid}_{g.species_taxid}_{g.genus_taxid}_{g.family_taxid}"
 
 
 def augment_and_count_read_header(line, r, line_number):
-    assert line.endswith(r), f"fastq produced by ISS have read id's ending with _1\\n or _2\\n"
     assert len(r) == 3
+    sep = r[0]
+    assert line.endswith(r), f"fastq produced by ISS have read id's ending with {sep}1\\n or {sep}2\\n"
     iss_read_id = line[:-3]
     zero_padded_read_count = "{:010d}".format(line_number // 4)
     serial_number = f"s{zero_padded_read_count}"
-    versioned_accession_id = iss_read_id.rsplit("_", 1)[0][1:]
+    versioned_accession_id = iss_read_id.rsplit(sep, 1)[0].rsplit("_", 1)[0][1:]
     g = Genome.by_accid[versioned_accession_id]
     benchmark_lineage = benchmark_lineage_tag(g)
     return f"{iss_read_id}__{benchmark_lineage}__{serial_number}\n", g.key
@@ -145,11 +126,6 @@ def annotate_and_count_reads(input_fastq, output_fastq, r, counters, accumulator
         except Exception as _:
             print(f"Error parsing line {line_number} in {input_fastq}.")
             raise
-
-
-def chop(txt, suffix):
-    assert txt.endswith(suffix)
-    return txt[:-len(suffix)]
 
 
 def output_summary_counters(rc, iss_command, counters, accumulators):
@@ -219,11 +195,24 @@ def get_git_hash():
     return commit_hash
 
 
+def strictly_above(va, vb):
+    for a, b in zip(va.split("."), vb.split(".")):
+        if int(a) > int(b):
+            return True
+        if int(a) < int(b):
+            return False
+    return False
+
+
 def run_iss(rc, iss_command):
     check_call(iss_command)
     counters = defaultdict(int)
     accumulators = defaultdict(int)
-    for tmp_fastq, output_fastq, r in zip(rc.tmp_files, rc.output_files, ["_1\n", "_2\n"]):
+    if strictly_above(rc.iss_version, "1.2.0"):
+        suffixes = ["/1\n", "/2\n"]
+    else:
+        suffixes = ["_1\n", "_2\n"]
+    for tmp_fastq, output_fastq, r in zip(rc.tmp_files, rc.output_files, suffixes):
         annotate_and_count_reads(tmp_fastq, output_fastq, r, counters, accumulators)
     output_summary_counters(rc, iss_command, counters, accumulators)
     rc.cleanup()
