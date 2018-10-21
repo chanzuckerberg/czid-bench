@@ -73,5 +73,5 @@ An even more detailed summary, including all ISS options, is generated in json f
 
 # automated testing of IDSeq Portal
 
-Just upload an output folder to `s3://idseq-bench/next-number` and add
+Just upload an output folder to `s3://idseq-bench/<next-number>` and add
 an entry for it to `s3://idseq-bench/config.json` to specify frequency and environments in which that test should run.
