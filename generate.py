@@ -16,7 +16,7 @@ import sys
 import json
 from multiprocessing import cpu_count
 from collections import defaultdict
-from util import remove_safely, check_call, smart_open, chop, ProgressTracker
+from util import remove_safely, check_call, smart_open, ProgressTracker
 from params import MODELS, UNIFORM_ABUNDANCE, TOP_6_ID_GENOMES, NUM_READS
 from genome import Genome
 

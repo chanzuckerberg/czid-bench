@@ -9,13 +9,6 @@ def remove_safely(fn):
         os.remove(fn)
 
 
-def check_call(command, quiet=False):
-    if not quiet:
-        print(repr(command))
-    exitcode = os.system(command)
-    assert exitcode == 0, f"Command failed: {command}"
-
-
 def smart_open(filename, mode):
     if filename.endswith(".gz"):
         return gzip.open(filename, mode)
@@ -27,18 +20,19 @@ def chop(txt, suffix):
     return txt[:-len(suffix)]
 
 
-def check_output(command, quiet=False):
+def check_call(command, capture_stdout=False, quiet=False):
     # Assuming python >= 3.5
-    if type(command) == str:
-        command_str = command
-        command_list = command.split()
-    else:
-        if not quiet:
-            command_str = " ".join(command)
-        command_list = command
+    shell = (type(command) == str)
     if not quiet:
+        command_str = command if shell else " ".join(command)
         print(repr(command_str))
-    return subprocess.run(command_list, stdout=subprocess.PIPE).stdout.decode('utf-8')
+    stdout = subprocess.PIPE if capture_stdout else None
+    p = subprocess.run(command, shell=shell, check=True, stdout=stdout)
+    return p.stdout.decode('utf-8') if capture_stdout else None
+
+
+def check_output(command, quiet=False):
+    return check_call(command, capture_stdout=True, quiet=quiet)
 
 
 class ProgressTracker:
