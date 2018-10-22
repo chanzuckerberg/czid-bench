@@ -15,6 +15,25 @@ def smart_open(filename, mode):
     return open(filename, mode)
 
 
+def smarter_open(filename, mode, quiet=False):
+    assert mode == "r"
+    if filename.startswith("s3://"):
+        s3cat = f"aws s3 cp {filename} -"
+        if filename.endswith(".gz"):
+            s3cat += " | gzip -dc"
+        if not quiet:
+            print(repr(s3cat))
+        # TODO: check=True?
+        return subprocess.Popen(s3cat, shell=True, stdout=subprocess.PIPE)
+    return smart_open(filename, mode)
+
+
+def smarter_readline(f):
+    if hasattr(f, "stdout"):
+        return f.stdout.readline()
+    return f.readline()
+
+
 def chop(txt, suffix):
     assert txt.endswith(suffix)
     return txt[:-len(suffix)]
@@ -22,10 +41,13 @@ def chop(txt, suffix):
 
 def check_call(command, capture_stdout=False, quiet=False):
     # Assuming python >= 3.5
-    shell = (type(command) == str)
+    shell = isinstance(command, str)
     if not quiet:
         command_str = command if shell else " ".join(command)
         print(repr(command_str))
+    # In Python 3.7 the subprocess.run function accepts capture_output param,
+    # so setting stdout like so is only done for backward compatibility with
+    # python versions >= 3.5.  That's the minimum we support.
     stdout = subprocess.PIPE if capture_stdout else None
     p = subprocess.run(command, shell=shell, check=True, stdout=stdout)
     return p.stdout.decode('utf-8') if capture_stdout else None

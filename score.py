@@ -17,7 +17,7 @@ import subprocess
 from fnmatch import fnmatch
 from multiprocessing import cpu_count
 from collections import defaultdict
-from util import remove_safely, check_call, smart_open, check_output, ProgressTracker
+from util import remove_safely, check_call, smarter_open, smarter_readline, check_output, ProgressTracker
 
 
 # TODO: Use NamedTuple instead.
@@ -48,7 +48,7 @@ def smart_glob(pattern, expected, ls_memory={}):  # pylint: disable=dangerous-de
 
 
 def smart_ls(pdir, missing_ok=True, memory=None):
-    "Return a list of files in dir.  Cached."
+    "Return a list of files in pdir.  This pdir can be local or in s3.  If memory dict provided, use it to memoize.  If missing_ok=True, swallow errors (default)."
     result = memory.get(pdir) if memory else None
     if result == None:
         try:
@@ -100,13 +100,18 @@ def benchmark_lineage_to_taxid_strs(benchmark_lineage):
     return tuple(taxid_str for taxid_str in benchmark_lineage.split("_")[2:])
 
 
+def accumulators_new():
+    "Use result as follows: accumulators[benchmark_lineage][taxid_rank][taxid_str] += 1"
+    return defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
+
+
 def count_fastq(input_fastq):
     assert ".fastq" in input_fastq
-    accumulators = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
-    with smart_open(input_fastq, "r") as input_f:
+    accumulators = accumulators_new()
+    with smarter_open(input_fastq, "r") as input_f:
         line_number = 1
         try:
-            line = input_f.readline()
+            line = smarter_readline(input_f)
             while line:
                 # The FASTQ format specifies that each read consists of 4 lines,
                 # the first of which begins with @ followed by read ID.
@@ -117,7 +122,7 @@ def count_fastq(input_fastq):
                 for taxid_rank, taxid_str in zip(TAXID_RANKS, taxid_strings):
                     accumulators[benchmark_lineage][taxid_rank][taxid_str] += 1
                 for _ in range(4):
-                    line = input_f.readline()
+                    line = smarter_readline(input_f)
                     line_number += 1
         except Exception as _:
             print(f"Error parsing line {line_number} in {input_fastq}.")
