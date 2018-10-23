@@ -104,7 +104,7 @@ def annotate_and_count_reads(input_fastq, output_fastq, r, counters, accumulator
     that _1 or _2  paired-end indicator appended by ISS.  Required to run correctly
     through STAR.  Also annotate with lineage information, that can later be used
     to score idseq accuracy."""
-    with smart_open(input_fastq, "r") as input_f, \
+    with smart_open(input_fastq, "rb") as input_f, \
          smart_open(output_fastq, "w") as output_f:
         line_number = 1
         try:
@@ -112,6 +112,7 @@ def annotate_and_count_reads(input_fastq, output_fastq, r, counters, accumulator
             while line:
                 # The FASTQ format specifies that each read consists of 4 lines,
                 # the first of which begins with @ followed by read ID.
+                line = line.decode('utf-8')
                 assert line[0] == "@", f"fastq format requires every 4th line to start with @"
                 augmented_read_header, g_key = augment_and_count_read_header(line, r, line_number)
                 counters[g_key] += 1
@@ -122,7 +123,7 @@ def annotate_and_count_reads(input_fastq, output_fastq, r, counters, accumulator
                     if i == 0:
                         accumulators[g_key] += (len(line) - 1)
                     if i < 3:
-                        output_f.write(line.encode('utf-8'))
+                        output_f.write(line)
         except Exception as _:
             print(f"Error parsing line {line_number} in {input_fastq}.")
             raise

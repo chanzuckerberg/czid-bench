@@ -2,6 +2,7 @@ import os
 import gzip
 import time
 import subprocess
+from fnmatch import fnmatch
 
 
 def remove_safely(fn):
@@ -16,7 +17,7 @@ def smart_open(filename, mode):
 
 
 def smarter_open(filename, mode, quiet=False):
-    assert mode == "r"
+    assert mode == "rb"
     if filename.startswith("s3://"):
         s3cat = f"aws s3 cp {filename} -"
         if filename.endswith(".gz"):
@@ -55,6 +56,44 @@ def check_call(command, capture_stdout=False, quiet=False):
 
 def check_output(command, quiet=False):
     return check_call(command, capture_stdout=True, quiet=quiet)
+
+
+def smart_glob(pattern, expected, ls_memory={}):  # pylint: disable=dangerous-default-value
+    pdir, file_pattern = pattern.rsplit("/", 1)
+    def match_pattern(filename):
+        return fnmatch(filename, file_pattern)
+    matching_files = list(filter(match_pattern, smart_ls(pdir, memory=ls_memory)))
+    actual = len(matching_files)
+    assert expected == actual, f"Expected {expected} files for {pattern}, found {actual}"
+    return [f"{pdir}/{mf}" for mf in sorted(matching_files)]
+
+
+def smart_ls(pdir, missing_ok=True, memory=None):
+    "Return a list of files in pdir.  This pdir can be local or in s3.  If memory dict provided, use it to memoize.  If missing_ok=True, swallow errors (default)."
+    result = memory.get(pdir) if memory else None
+    if result == None:
+        try:
+            if pdir.startswith("s3"):
+                s3_dir = pdir
+                if not s3_dir.endswith("/"):
+                    s3_dir += "/"
+                output = check_output(["aws", "s3", "ls", s3_dir])
+                rows = output.strip().split('\n')
+                result = [r.split()[-1] for r in rows]
+            else:
+                output = check_output(["ls", pdir])
+                result = output.strip().split('\n')
+        except Exception as e:
+            msg = f"Could not read directory: {pdir}"
+            if missing_ok and isinstance(e, subprocess.CalledProcessError):
+                print(f"INFO: {msg}")
+                result = []
+            else:
+                print(f"ERROR: {msg}")
+                raise
+        if memory != None:
+            memory[pdir] = result
+    return result
 
 
 class ProgressTracker:
