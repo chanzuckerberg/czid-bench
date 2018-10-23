@@ -9,15 +9,11 @@
 #
 # This computes the QC and recall rate for each sample organism.
 #
-import os
 import sys
 import json
 import re
-import subprocess
-from fnmatch import fnmatch
-from multiprocessing import cpu_count
 from collections import defaultdict
-from util import remove_safely, check_call, smarter_open, smarter_readline, check_output, ProgressTracker
+from util import smarter_open, smarter_readline, smart_glob
 
 
 # TODO: Use NamedTuple instead.
@@ -32,47 +28,9 @@ def glob_sample_data(sample, version):
             smart_glob(f"{sample}/fastqs/*.fastq*", expected=2),
         "post_qc_fasta":
             smart_glob(f"{sample}/results/{version}/gsnap_filter_[1,2].fa*", expected=2),
-        "output_fasta":
+        "post_alignment_fasta":
             smart_glob(f"{sample}/postprocess/{version}/taxid_annot.fasta", expected=1)
     }
-
-
-def smart_glob(pattern, expected, ls_memory={}):  # pylint: disable=dangerous-default-value
-    pdir, file_pattern = pattern.rsplit("/", 1)
-    def match_pattern(filename):
-        return fnmatch(filename, file_pattern)
-    matching_files = list(filter(match_pattern, smart_ls(pdir, memory=ls_memory)))
-    actual = len(matching_files)
-    assert expected == actual, f"Expected {expected} files for {pattern}, found {actual}"
-    return [f"{pdir}/{mf}" for mf in sorted(matching_files)]
-
-
-def smart_ls(pdir, missing_ok=True, memory=None):
-    "Return a list of files in pdir.  This pdir can be local or in s3.  If memory dict provided, use it to memoize.  If missing_ok=True, swallow errors (default)."
-    result = memory.get(pdir) if memory else None
-    if result == None:
-        try:
-            if pdir.startswith("s3"):
-                s3_dir = pdir
-                if not s3_dir.endswith("/"):
-                    s3_dir += "/"
-                output = check_output(["aws", "s3", "ls", s3_dir])
-                rows = output.strip().split('\n')
-                result = [r.split()[-1] for r in rows]
-            else:
-                output = check_output(["ls", pdir])
-                result = output.strip().split('\n')
-        except Exception as e:
-            msg = f"Could not read directory: {pdir}"
-            if missing_ok and isinstance(e, subprocess.CalledProcessError):
-                print(f"INFO: {msg}")
-                result = []
-            else:
-                print(f"ERROR: {msg}")
-                raise
-        if memory != None:
-            memory[pdir] = result
-    return result
 
 
 def parse_result_dir(sample_result_dir):
@@ -91,7 +49,7 @@ def parse_result_dir(sample_result_dir):
 
 def benchmark_lineage_from_header(header_line):
     matches = re.search(r'__benchmark_lineage_\d+_\d+_\d+_\d+__', header_line)
-    assert matches, "Non-benchmark reads present"
+    assert matches, "Missing or malformed benchmark_lineage tag."
     benchmark_lineage = matches.group(0)[2:-2]
     return benchmark_lineage
 
@@ -106,9 +64,9 @@ def accumulators_new():
 
 
 def count_fastq(input_fastq):
-    assert ".fastq" in input_fastq
+    assert ".fastq" in input_fastq or ".fq" in input_fastq
     accumulators = accumulators_new()
-    with smarter_open(input_fastq, "r") as input_f:
+    with smarter_open(input_fastq, "rb") as input_f:
         line_number = 1
         try:
             line = smarter_readline(input_f)
@@ -130,11 +88,55 @@ def count_fastq(input_fastq):
     return accumulators
 
 
+def count_fasta(fasta_file):
+    assert ".fasta" in fasta_file or ".fa" in fasta_file
+    accumulators = accumulators_new()
+    with smarter_open(fasta_file, "rb") as input_f:
+        line_number = 1
+        try:
+            line = smarter_readline(input_f)
+            while line:
+                # The FASTA format specifies that each read header starts with ">"
+                line = line.decode('utf-8')
+                if line[0] == ">":
+                    benchmark_lineage = benchmark_lineage_from_header(line)
+                    taxid_strings = benchmark_lineage_to_taxid_strs(benchmark_lineage)
+                    for taxid_rank, taxid_str in zip(TAXID_RANKS, taxid_strings):
+                        accumulators[benchmark_lineage][taxid_rank][taxid_str] += 1
+                line = smarter_readline(input_f)
+                line_number += 1
+        except Exception as _:
+            print(f"Error parsing line {line_number} in {fasta_file}.")
+            raise
+    return accumulators
+
+
 def increment(accumulators, delta):
-    for benchmark_lineage in delta.keys():
-        for taxid_rank in delta[benchmark_lineage].keys():
-            for taxid_str in delta[benchmark_lineage][taxid_rank].keys():
+    for benchmark_lineage in delta:
+        for taxid_rank in delta[benchmark_lineage]:
+            for taxid_str in delta[benchmark_lineage][taxid_rank]:
                 accumulators[benchmark_lineage][taxid_rank][taxid_str] += delta[benchmark_lineage][taxid_rank][taxid_str]
+
+
+def pick_from_equal(values):
+    result = None
+    for v in values:
+        if result == None:
+            result = v
+        assert result == v
+    return result
+
+
+def condense(accumulators):
+    condenser = defaultdict(lambda: defaultdict(int))
+    for benchmark_lineage in accumulators:
+        ranks = []
+        for taxid_rank in accumulators[benchmark_lineage]:
+            ranks.append(taxid_rank)
+            read_count = pick_from_equal(accumulators[benchmark_lineage][taxid_rank].values())
+            condenser[benchmark_lineage][taxid_rank] = read_count
+        assert ranks == TAXID_RANKS
+    return condenser
 
 
 def main(args):
@@ -145,9 +147,16 @@ def main(args):
     sample_data = glob_sample_data(sample, version)
     print(json.dumps(sample_data, indent=4))
     r1, r2 = sample_data["input_fastq"]
-    input_counts = count_fastq(r1)
-    increment(input_counts, count_fastq(r2))
-    print(json.dumps(input_counts, indent=4))
+    counts = count_fastq(r1)
+    increment(counts, count_fastq(r2))
+    r1, r2 = sample_data["post_qc_fasta"]
+    fasta_counts = count_fasta(r1)
+    increment(fasta_counts, count_fasta(r2))
+    tally = {
+        "input_fastq": condense(counts),
+        "post_qc_fasta": condense(fasta_counts),
+    }
+    print(json.dumps(tally, indent=4))
 
 
 if __name__ == "__main__":
