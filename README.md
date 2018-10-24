@@ -27,7 +27,7 @@ Add/modify entries like this in `params.py`
 ```
 
 # tweaking InSilicoSeq options
-Edit [params.py](params.py) or [main.py](main.py) as desired, e.g., to select a different set of [error models](https://insilicoseq.readthedocs.io/en/latest/iss/model.html).
+Edit [params.py](params.py) or [generate.py](generate.py) as desired, e.g., to select a different set of [error models](https://insilicoseq.readthedocs.io/en/latest/iss/model.html).
 
 If the output data changes, we expect the output file name to change as well.  It's always a good idea to increment
 LOGICAL_VERSION (whole numbers only) after making changes to the code.
@@ -75,3 +75,60 @@ An even more detailed summary, including all ISS options, is generated in json f
 
 Just upload an output folder to `s3://idseq-bench/<next-number>` and add
 an entry for it to `s3://idseq-bench/config.json` to specify frequency and environments in which that test should run.
+
+# scoring an IDSeq Portal Run
+
+After a benchmark sample has completed running through the IDSeq Portal, the QC pass rate and recall per benchmark organism can be scored by running, e.g.,
+```
+python3 score.py s3://idseq-samples-prod/samples/16/8848/results/2.8
+```
+which produces JSON formatted output like so
+```
+{
+    "sample_data": {
+        "input_fastq": [
+            "s3://idseq-samples-prod/samples/16/8848/fastqs/norg_6__nacc_27__uniform_weight_per_organism__hiseq_reads__v4__R1.fastq.gz",
+            "s3://idseq-samples-prod/samples/16/8848/fastqs/norg_6__nacc_27__uniform_weight_per_organism__hiseq_reads__v4__R2.fastq.gz"
+        ],
+        "post_qc_fasta": [
+            "s3://idseq-samples-prod/samples/16/8848/results/2.8/gsnap_filter_1.fa",
+            "s3://idseq-samples-prod/samples/16/8848/results/2.8/gsnap_filter_2.fa"
+        ],
+        "post_alignment_fasta": [
+            "s3://idseq-samples-prod/samples/16/8848/postprocess/2.8/taxid_annot.fasta"
+        ]
+    },
+    "stats": {
+        "benchmark_lineage_0_37124_11019_11018": {
+            "total_reads": {
+                "count": 16642
+            },
+            "surived_qc": {
+                "count": 14044,
+                "fraction": 0.8439
+            },
+            "recalled_correctly": {
+                "family": {
+                    "nt": 10206,
+                    "nr": 3856,
+                    "best_post_qc": 0.7267
+                },
+                "genus": {
+                    "nt": 10206,
+                    "nr": 3856,
+                    "best_post_qc": 0.7267
+                },
+                "species": {
+                    "nt": 10206,
+                    "nr": 3743,
+                    "best_post_qc": 0.7267
+                }
+            }
+        },
+        "benchmark_lineage_0_463676_12059_12058": {
+            "total_reads": {
+                "count": 16366
+            },
+        ...
+```
+Note that `recalled_correctly.best_post_qc` represent the higher of `recalled_correctly.nt` and `recalled_correctly.nr` divided by `survived_qc.count`.  For more details, see the code in [score.py](score.py).
