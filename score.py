@@ -145,14 +145,16 @@ def pick_from_equal(values):
 
 
 def condense_equal(accumulators):
-    condenser = defaultdict(lambda: defaultdict(int))
+    condenser = {}
     for benchmark_lineage in accumulators:
         ranks = []
+        read_counts = []
         for taxid_rank in accumulators[benchmark_lineage]:
             ranks.append(taxid_rank)
-            read_count = pick_from_equal(accumulators[benchmark_lineage][taxid_rank].values())
-            condenser[benchmark_lineage][taxid_rank] = read_count
+            this_count = pick_from_equal(accumulators[benchmark_lineage][taxid_rank].values())
+            read_counts.append(this_count)
         assert ranks == TAXID_RANKS
+        condenser[benchmark_lineage] = pick_from_equal(read_counts)
     return condenser
 
 
@@ -202,6 +204,7 @@ def main(args):
         "post_alignment_fasta": annot_counts,
     }
     print(json.dumps(tally, indent=4))
+
 
 
 if __name__ == "__main__":
