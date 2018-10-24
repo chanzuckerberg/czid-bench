@@ -227,7 +227,7 @@ def main(args):
     for benchmark_lineage in sorted(input_fastq_counts.keys()):
         total_reads = input_fastq_counts[benchmark_lineage]
         survived_qc = post_qc_fasta_counts[benchmark_lineage]
-        subspecies, species, genus, family = benchmark_lineage_to_taxid_strs(benchmark_lineage)
+        _, species, genus, family = benchmark_lineage_to_taxid_strs(benchmark_lineage)
         correct_family_nt = annot_counts[benchmark_lineage]["family_nt"][family]
         correct_family_nr = annot_counts[benchmark_lineage]["family_nr"][family]
         correct_family = max(correct_family_nt, correct_family_nr)
