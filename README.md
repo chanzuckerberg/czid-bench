@@ -132,3 +132,5 @@ which produces JSON formatted output like so
         ...
 ```
 Note that `recalled_correctly.best_post_qc` represents the higher of `recalled_correctly.nt` and `recalled_correctly.nr` divided by `survived_qc.count`.  For more details, see the code in [score.py](score.py).
+
+For users who lack direct access to S3, scoring also works on a local download of sample results.  However, you must organize any locally downloaded files in versioned subfolders to match the S3 structure illustrated in the example above.  Alternatively, edit `glob_sample_data` in [score.py](score.py) to alter the expected folder structure so it matches your local download.
