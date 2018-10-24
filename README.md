@@ -32,7 +32,7 @@ Edit [params.py](params.py) or [generate.py](generate.py) as desired, e.g., to s
 If the output data changes, we expect the output file name to change as well.  It's always a good idea to increment
 LOGICAL_VERSION (whole numbers only) after making changes to the code.
 
-If your code or paramter changes are uncommitted, the program will refuse to run.   You can force it to run with the `--irreproducible` flag, but irreproducible outputs cannot be used for automated testing of the IDSeq Portal.
+If your code or parameter changes are uncommitted, the program will refuse to run.   You can force it to run with the `--irreproducible` flag, but irreproducible outputs cannot be used for automated testing of the IDSeq Portal.
 
 # interpreting the output
 Each output file name reflects the params of its generation, like so:
@@ -131,4 +131,4 @@ which produces JSON formatted output like so
             },
         ...
 ```
-Note that `recalled_correctly.best_post_qc` represent the higher of `recalled_correctly.nt` and `recalled_correctly.nr` divided by `survived_qc.count`.  For more details, see the code in [score.py](score.py).
+Note that `recalled_correctly.best_post_qc` represents the higher of `recalled_correctly.nt` and `recalled_correctly.nr` divided by `survived_qc.count`.  For more details, see the code in [score.py](score.py).
