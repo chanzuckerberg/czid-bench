@@ -20,6 +20,16 @@ from util import smarter_open, smarter_readline, smart_glob
 # List ranks in the same order as benchmark_lineage tags.
 TAXID_RANKS = ["subspecies", "species", "genus", "family"]
 
+# Benchmark linage tag format.
+BENCHMARK_LINEAGE_PATTERN = r'__benchmark_lineage_\d+_\d+_\d+_\d+__'
+
+# IDSeq linage tag format in taxid_annot.fasta.
+TAXID = r'[+,-]?\d+'
+IDSEQ_LINEAGE_PATTERN = (
+    f"family_nr:{TAXID}:family_nt:{TAXID}:" +
+    f"genus_nr:{TAXID}:genus_nt:{TAXID}:" +
+    f"species_nr:{TAXID}:species_nt:{TAXID}"
+)
 
 def glob_sample_data(sample, version):
     "Enumerate pipeline stage data to be counted."
@@ -48,10 +58,17 @@ def parse_result_dir(sample_result_dir):
 
 
 def benchmark_lineage_from_header(header_line):
-    matches = re.search(r'__benchmark_lineage_\d+_\d+_\d+_\d+__', header_line)
+    matches = re.search(BENCHMARK_LINEAGE_PATTERN, header_line)
     assert matches, "Missing or malformed benchmark_lineage tag."
     benchmark_lineage = matches.group(0)[2:-2]
     return benchmark_lineage
+
+
+def idseq_lineage_from_header(header_line):
+    matches = re.search(IDSEQ_LINEAGE_PATTERN, header_line)
+    assert matches, f"Missing or malformed idseq lineage tags in '{header_line}'."
+    tokens = matches.group(0).split(":")
+    return zip(tokens[0::2], tokens[1::2])
 
 
 def benchmark_lineage_to_taxid_strs(benchmark_lineage):
@@ -127,16 +144,60 @@ def pick_from_equal(values):
     return result
 
 
-def condense(accumulators):
-    condenser = defaultdict(lambda: defaultdict(int))
+def condense_equal(accumulators):
+    condenser = {}
     for benchmark_lineage in accumulators:
         ranks = []
+        read_counts = []
         for taxid_rank in accumulators[benchmark_lineage]:
             ranks.append(taxid_rank)
-            read_count = pick_from_equal(accumulators[benchmark_lineage][taxid_rank].values())
-            condenser[benchmark_lineage][taxid_rank] = read_count
+            this_count = pick_from_equal(accumulators[benchmark_lineage][taxid_rank].values())
+            read_counts.append(this_count)
         assert ranks == TAXID_RANKS
+        condenser[benchmark_lineage] = pick_from_equal(read_counts)
     return condenser
+
+
+def count_annot_fasta(fasta_file):
+    assert ".fasta" in fasta_file or ".fa" in fasta_file
+    accumulators = accumulators_new()
+    with smarter_open(fasta_file, "rb") as input_f:
+        line_number = 1
+        try:
+            line = smarter_readline(input_f)
+            while line:
+                # The FASTA format specifies that each read header starts with ">"
+                line = line.decode('utf-8')
+                if line[0] == ">":
+                    benchmark_linage = benchmark_lineage_from_header(line)
+                    idseq_lineage = idseq_lineage_from_header(line)
+                    # TODO:  Does the annot fasta format exclude duplicates?   If not, ensure we exclude them here.
+                    # Perhaps also assert on recall > 1.
+                    for taxid_rank, taxid_str in idseq_lineage:
+                        accumulators[benchmark_linage][taxid_rank][taxid_str] += 1
+                line = smarter_readline(input_f)
+                line_number += 1
+        except Exception as _:
+            print(f"Error parsing line {line_number} in {fasta_file}.")
+            raise
+    return accumulators
+
+
+def precision(total):
+    # make sure we don't exaggerate precision, which would be misleading to humans...
+    if total < 100:
+        return 10
+    if total < 1000:
+        return 100
+    if total < 10*1000:
+        return 1000
+    if total < 100*1000:
+        return 10*1000
+    return 100*1000
+
+
+def truncprec(fpn, prec):
+    return int(fpn * prec + 0.5) / prec
 
 
 def main(args):
@@ -145,18 +206,70 @@ def main(args):
     print(f"Scoring IDSEQ benchmark output {sample_result_dir}")
     sample, version = parse_result_dir(sample_result_dir)
     sample_data = glob_sample_data(sample, version)
-    print(json.dumps(sample_data, indent=4))
+    #print(json.dumps(sample_data, indent=4))
     r1, r2 = sample_data["input_fastq"]
-    counts = count_fastq(r1)
-    increment(counts, count_fastq(r2))
+    input_fastq_counts = count_fastq(r1)
+    increment(input_fastq_counts, count_fastq(r2))
+    input_fastq_counts = condense_equal(input_fastq_counts)
     r1, r2 = sample_data["post_qc_fasta"]
-    fasta_counts = count_fasta(r1)
-    increment(fasta_counts, count_fasta(r2))
-    tally = {
-        "input_fastq": condense(counts),
-        "post_qc_fasta": condense(fasta_counts),
+    post_qc_fasta_counts = count_fasta(r1)
+    increment(post_qc_fasta_counts, count_fasta(r2))
+    post_qc_fasta_counts = condense_equal(post_qc_fasta_counts)
+    r = sample_data["post_alignment_fasta"][0]
+    annot_counts = count_annot_fasta(r)
+    # tally = {
+    #     "input_fastq": input_fastq_counts,
+    #     "post_qc_fasta": post_qc_fasta_counts,
+    #     "post_alignment_fasta": annot_counts,
+    # }
+    # print(json.dumps(tally, indent=4))
+    stats = {}
+    for benchmark_lineage in sorted(input_fastq_counts.keys()):
+        total_reads = input_fastq_counts[benchmark_lineage]
+        survived_qc = post_qc_fasta_counts[benchmark_lineage]
+        _, species, genus, family = benchmark_lineage_to_taxid_strs(benchmark_lineage)
+        correct_family_nt = annot_counts[benchmark_lineage]["family_nt"][family]
+        correct_family_nr = annot_counts[benchmark_lineage]["family_nr"][family]
+        correct_family = max(correct_family_nt, correct_family_nr)
+        correct_genus_nt = annot_counts[benchmark_lineage]["genus_nt"][genus]
+        correct_genus_nr = annot_counts[benchmark_lineage]["genus_nr"][genus]
+        correct_genus = max(correct_genus_nt, correct_genus_nr)
+        correct_species_nt = annot_counts[benchmark_lineage]["species_nt"][species]
+        correct_species_nr = annot_counts[benchmark_lineage]["species_nr"][species]
+        correct_species = max(correct_species_nt, correct_species_nr)
+        prec_total = precision(total_reads)
+        prec_qc = precision(survived_qc)
+        stats[benchmark_lineage] = {
+            "total_reads": {
+                "count": total_reads,
+            },
+            "surived_qc": {
+                "count":  survived_qc,
+                "fraction":  truncprec(survived_qc / total_reads, prec_total)
+            },
+            "recalled_correctly": {
+                "family": {
+                    "nt": correct_family_nt,
+                    "nr": correct_family_nr,
+                    "best_post_qc": truncprec(correct_family / survived_qc, prec_qc)
+                },
+                "genus": {
+                    "nt": correct_genus_nt,
+                    "nr": correct_genus_nr,
+                    "best_post_qc": truncprec(correct_genus / survived_qc, prec_qc)
+                },
+                "species": {
+                    "nt": correct_species_nt,
+                    "nr": correct_species_nr,
+                    "best_post_qc": truncprec(correct_species / survived_qc, prec_qc)
+                }
+            }
+        }
+    result = {
+        "sample_data":  sample_data,
+        "stats": stats
     }
-    print(json.dumps(tally, indent=4))
+    print(json.dumps(result, indent=4))
 
 
 if __name__ == "__main__":
