@@ -20,6 +20,16 @@ from util import smarter_open, smarter_readline, smart_glob
 # List ranks in the same order as benchmark_lineage tags.
 TAXID_RANKS = ["subspecies", "species", "genus", "family"]
 
+# Benchmark linage tag format.
+BENCHMARK_LINEAGE_PATTERN = r'__benchmark_lineage_\d+_\d+_\d+_\d+__'
+
+# IDSeq linage tag format in taxid_annot.fasta.
+TAXID = r'[+,-]?\d+'
+IDSEQ_LINEAGE_PATTERN = (
+    f"family_nr:{TAXID}:family_nt:{TAXID}:" +
+    f"genus_nr:{TAXID}:genus_nt:{TAXID}:" +
+    f"species_nr:{TAXID}:species_nt:{TAXID}"
+)
 
 def glob_sample_data(sample, version):
     "Enumerate pipeline stage data to be counted."
@@ -48,10 +58,17 @@ def parse_result_dir(sample_result_dir):
 
 
 def benchmark_lineage_from_header(header_line):
-    matches = re.search(r'__benchmark_lineage_\d+_\d+_\d+_\d+__', header_line)
+    matches = re.search(BENCHMARK_LINEAGE_PATTERN, header_line)
     assert matches, "Missing or malformed benchmark_lineage tag."
     benchmark_lineage = matches.group(0)[2:-2]
     return benchmark_lineage
+
+
+def idseq_lineage_from_header(header_line):
+    matches = re.search(IDSEQ_LINEAGE_PATTERN, header_line)
+    assert matches, f"Missing or malformed idseq lineage tags in '{header_line}'."
+    tokens = matches.group(0).split(":")
+    return zip(tokens[0::2], tokens[1::2])
 
 
 def benchmark_lineage_to_taxid_strs(benchmark_lineage):
@@ -127,7 +144,7 @@ def pick_from_equal(values):
     return result
 
 
-def condense(accumulators):
+def condense_equal(accumulators):
     condenser = defaultdict(lambda: defaultdict(int))
     for benchmark_lineage in accumulators:
         ranks = []
@@ -139,6 +156,31 @@ def condense(accumulators):
     return condenser
 
 
+def count_annot_fasta(fasta_file):
+    assert ".fasta" in fasta_file or ".fa" in fasta_file
+    accumulators = accumulators_new()
+    with smarter_open(fasta_file, "rb") as input_f:
+        line_number = 1
+        try:
+            line = smarter_readline(input_f)
+            while line:
+                # The FASTA format specifies that each read header starts with ">"
+                line = line.decode('utf-8')
+                if line[0] == ">":
+                    benchmark_linage = benchmark_lineage_from_header(line)
+                    idseq_lineage = idseq_lineage_from_header(line)
+                    # TODO:  Does the annot fasta format exclude duplicates?   If not, ensure we exclude them here.
+                    # Perhaps also assert on recall > 1.
+                    for taxid_rank, taxid_str in idseq_lineage:
+                        accumulators[benchmark_linage][taxid_rank][taxid_str] += 1
+                line = smarter_readline(input_f)
+                line_number += 1
+        except Exception as _:
+            print(f"Error parsing line {line_number} in {fasta_file}.")
+            raise
+    return accumulators
+
+
 def main(args):
     assert len(args) == 2, "Sample dir argument is required.  See usage."
     sample_result_dir = args[1]
@@ -147,14 +189,17 @@ def main(args):
     sample_data = glob_sample_data(sample, version)
     print(json.dumps(sample_data, indent=4))
     r1, r2 = sample_data["input_fastq"]
-    counts = count_fastq(r1)
-    increment(counts, count_fastq(r2))
+    fastq_counts = count_fastq(r1)
+    increment(fastq_counts, count_fastq(r2))
     r1, r2 = sample_data["post_qc_fasta"]
     fasta_counts = count_fasta(r1)
     increment(fasta_counts, count_fasta(r2))
+    r = sample_data["post_alignment_fasta"][0]
+    annot_counts = count_annot_fasta(r)
     tally = {
-        "input_fastq": condense(counts),
-        "post_qc_fasta": condense(fasta_counts),
+        "input_fastq": condense_equal(fastq_counts),
+        "post_qc_fasta": condense_equal(fasta_counts),
+        "post_alignment_fasta": annot_counts,
     }
     print(json.dumps(tally, indent=4))
 
