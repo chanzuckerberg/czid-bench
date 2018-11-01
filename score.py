@@ -243,7 +243,7 @@ def main(args):
             "total_reads": {
                 "count": total_reads,
             },
-            "surived_qc": {
+            "survived_qc": {
                 "count":  survived_qc,
                 "fraction":  truncprec(survived_qc / total_reads, prec_total)
             },
