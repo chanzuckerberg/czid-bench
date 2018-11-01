@@ -17,13 +17,14 @@ import json
 from multiprocessing import cpu_count
 from collections import defaultdict
 from util import remove_safely, check_call, smart_open, ProgressTracker
-from params import MODELS, UNIFORM_ABUNDANCE, TOP_6_ID_GENOMES, NUM_READS
+from params import MODELS, UNIFORM_ABUNDANCE, MUTATED_RHINOVIRUS_C_GENOMES as GENOMES, NUM_READS
 from genome import Genome
 
 
 # Increment this as often as you like;  especially if a code change will result
-# in different content for the same output filename.
-LOGICAL_VERSION = "8"
+# in different content for the same output filename.  Versions above 10,000
+# are for experiment branches (not master).
+LOGICAL_VERSION = "10008"
 
 
 IRREPRODUCIBLE = any("irreproducible" in arg for arg in sys.argv)
@@ -266,14 +267,15 @@ def main():
     Genome.fetch_all()
     pid = os.getpid()
     tmp_prefix = f"tmp_{pid}"
-    ticker = ProgressTracker(target=num_reads * len(MODELS) * (1 + len(TOP_6_ID_GENOMES)))
+    ticker = ProgressTracker(target=num_reads * len(MODELS))
     for model in MODELS:
-        # First, generate a separate benchmark for each genome.
-        for g in TOP_6_ID_GENOMES:
-            run_iss_single_genome(g, num_reads, model, tmp_prefix, num_cpus)
-            ticker.advance(num_reads)
+        # No longer generate a separate benchmark for each genome.
+        if False:
+            for g in GENOMES:
+                run_iss_single_genome(g, num_reads, model, tmp_prefix, num_cpus)
+                ticker.advance(num_reads)
         # Then generate a multiplexed benchmark.
-        run_iss_multiplexed(TOP_6_ID_GENOMES, num_reads, model, tmp_prefix, num_cpus)
+        run_iss_multiplexed(GENOMES, num_reads, model, tmp_prefix, num_cpus)
         ticker.advance(num_reads)
 
 
