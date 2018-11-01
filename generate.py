@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# IDSeq Benchmark Generator.
+# IDseq Benchmark Generator.
 #
 # Prerequsites:
 #

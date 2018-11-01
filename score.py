@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 #
-# IDSeq Benchmark Scorer.
+# IDseq Benchmark Scorer.
 #
-# After running an idseq-bench sample through the IDSeq Portal,
+# After running an idseq-bench sample through the IDseq Portal,
 # score the portal output as follows:
 #
 #     python3 score.py s3://idseq-samples-prod/samples/16/8848/results/2.8
@@ -23,7 +23,7 @@ TAXID_RANKS = ["subspecies", "species", "genus", "family"]
 # Benchmark linage tag format.
 BENCHMARK_LINEAGE_PATTERN = r'__benchmark_lineage_\d+_\d+_\d+_\d+__'
 
-# IDSeq linage tag format in taxid_annot.fasta.
+# IDseq linage tag format in taxid_annot.fasta.
 TAXID = r'[+,-]?\d+'
 IDSEQ_LINEAGE_PATTERN = (
     f"family_nr:{TAXID}:family_nt:{TAXID}:" +

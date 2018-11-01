@@ -18,7 +18,7 @@ Check out our repositories:
 - [idseq-bench](https://github.com/chanzuckerberg/idseq-bench) - Pipeline benchmarking tools (here)
 
 # idseq-bench
-Benchmark generator for the [IDSeq Portal](https://idseq.net).
+Benchmark generator for the [IDseq Portal](https://idseq.net).
 
 So far just a thin wrapper around [InSilicoSeq](https://insilicoseq.readthedocs.io/en/latest/).
 
@@ -33,7 +33,7 @@ pip3 install ncbi-acc-download
 python3 ../generate.py
 ```
 
-This produces zipped fastq files that you can upload to the [IDSeq Portal](https://idseq.net) via [IDSEQ-CLI](https://github.com/chanzuckerberg/idseq-cli).
+This produces zipped fastq files that you can upload to the [IDseq Portal](https://idseq.net) via [IDSEQ-CLI](https://github.com/chanzuckerberg/idseq-cli).
 
 # selecting organisms and chromosomes
 Add/modify entries like this in `params.py`
@@ -51,7 +51,7 @@ Edit [params.py](params.py) or [generate.py](generate.py) as desired, e.g., to s
 If the output data changes, we expect the output file name to change as well.  It's always a good idea to increment
 LOGICAL_VERSION (whole numbers only) after making changes to the code.
 
-If your code or parameter changes are uncommitted, the program will refuse to run.   You can force it to run with the `--irreproducible` flag, but irreproducible outputs cannot be used for automated testing of the IDSeq Portal.
+If your code or parameter changes are uncommitted, the program will refuse to run.   You can force it to run with the `--irreproducible` flag, but irreproducible outputs cannot be used for automated testing of the IDseq Portal.
 
 # interpreting the output
 Each output file name reflects the params of its generation, like so:
@@ -67,7 +67,7 @@ TODO:  Random generator seed control.
 
 We generate a summary file for each pair of fastqs, indicating read counts per organism,
 and the average coverage of the organism's genome.  Each pair counts as 2 reads / 300 bases,
-matching InSilicoSeq and IDSeq conventions.
+matching InSilicoSeq and IDseq conventions.
 ```
 READS  COVERAGE    LINEAGE                                          GENOME
 ----------------------------------------------------------------------------------------------------------------------
@@ -90,14 +90,14 @@ scoring results.  We assume the pipelines would not cheat by inspecting those ta
 
 An even more detailed summary, including all ISS options, is generated in json format.
 
-# automated testing of IDSeq Portal
+# automated testing of IDseq Portal
 
 Just upload an output folder to `s3://idseq-bench/<next-number>` and add
 an entry for it to `s3://idseq-bench/config.json` to specify frequency and environments in which that test should run.
 
-# scoring an IDSeq Portal Run
+# scoring an IDseq Portal Run
 
-After a benchmark sample has completed running through the IDSeq Portal, the QC pass rate and recall per benchmark organism can be scored by running, e.g.,
+After a benchmark sample has completed running through the IDseq Portal, the QC pass rate and recall per benchmark organism can be scored by running, e.g.,
 ```
 python3 score.py s3://idseq-samples-prod/samples/16/8848/results/2.8
 ```
