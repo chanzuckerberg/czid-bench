@@ -122,7 +122,7 @@ which produces JSON formatted output like so
             "total_reads": {
                 "count": 16642
             },
-            "surived_qc": {
+            "survived_qc": {
                 "count": 14044,
                 "fraction": 0.8439
             },
