@@ -17,13 +17,16 @@ import json
 from multiprocessing import cpu_count
 from collections import defaultdict
 from util import remove_safely, check_call, smart_open, ProgressTracker
-from params import MODELS, UNIFORM_ABUNDANCE, TOP_6_ID_GENOMES, NUM_READS
+from params import MODELS, UNIFORM_ABUNDANCE, NUM_READS_PER_ORGANISM, top_6_id_genomes
 from genome import Genome
 
 
 # Increment this as often as you like;  especially if a code change will result
-# in different content for the same output filename.
-LOGICAL_VERSION = "8"
+# in different content for the same output filename.  Versions above 10,000
+# are for experiment branches (not master).
+LOGICAL_VERSION = "9"
+GENOMES = top_6_id_genomes()
+GENERATE_SINGLE_ORGANISM_BENCHMARKS = False
 
 
 IRREPRODUCIBLE = any("irreproducible" in arg for arg in sys.argv)
@@ -262,18 +265,22 @@ def run_iss_multiplexed(genomes, num_reads, model, tmp_prefix, num_cpus):
 def main():
     print("Generating IDSEQ benchmark data.")
     num_cpus = cpu_count()
-    num_reads = NUM_READS
+    num_reads = NUM_READS_PER_ORGANISM * len(GENOMES)
+    overall_reads = num_reads * len(MODELS)
+    if GENERATE_SINGLE_ORGANISM_BENCHMARKS:
+        overall_reads *= 2
     Genome.fetch_all()
     pid = os.getpid()
     tmp_prefix = f"tmp_{pid}"
-    ticker = ProgressTracker(target=num_reads * len(MODELS) * (1 + len(TOP_6_ID_GENOMES)))
+    ticker = ProgressTracker(target=overall_reads)
     for model in MODELS:
-        # First, generate a separate benchmark for each genome.
-        for g in TOP_6_ID_GENOMES:
-            run_iss_single_genome(g, num_reads, model, tmp_prefix, num_cpus)
-            ticker.advance(num_reads)
+        # No longer generate a separate benchmark for each genome.
+        if GENERATE_SINGLE_ORGANISM_BENCHMARKS:
+            for g in GENOMES:
+                run_iss_single_genome(g, num_reads, model, tmp_prefix, num_cpus)
+                ticker.advance(num_reads)
         # Then generate a multiplexed benchmark.
-        run_iss_multiplexed(TOP_6_ID_GENOMES, num_reads, model, tmp_prefix, num_cpus)
+        run_iss_multiplexed(GENOMES, num_reads, model, tmp_prefix, num_cpus)
         ticker.advance(num_reads)
 
 
