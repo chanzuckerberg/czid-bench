@@ -39,7 +39,9 @@ def glob_sample_data(sample, version):
         "post_qc_fasta":
             smart_glob(f"{sample}/results/{version}/gsnap_filter_[1,2].fa*", expected=2),
         "post_alignment_fasta":
-            smart_glob(f"{sample}/postprocess/{version}/taxid_annot.fasta", expected=1)
+            smart_glob(f"{sample}/postprocess/{version}/taxid_annot.fasta", expected=1),
+        "post_assembly_summary": # optional
+            smart_glob(f"{sample}/postprocess/{version}/assembly/*.hitsummary2.tab", expected=-1)
     }
 
 
@@ -69,6 +71,14 @@ def idseq_lineage_from_header(header_line):
     assert matches, f"Missing or malformed idseq lineage tags in '{header_line}'."
     tokens = matches.group(0).split(":")
     return zip(tokens[0::2], tokens[1::2])
+
+def idseq_lineage_from_summary(summary_line, db_type):
+    fields = summary_line.rstrip().split("\t")
+    if fields[-1] == 'from_assembly':
+        # remove the last element
+        fields.pop()
+    return zip([f"family_{db_type}", f"genus_{db_type}", f"species_{db_type}"],
+               fields[-1:-4:-1]) #
 
 
 def benchmark_lineage_to_taxid_strs(benchmark_lineage):
@@ -158,6 +168,32 @@ def condense_equal(accumulators):
     return condenser
 
 
+def count_from_hitsummaries(assembly_summaries):
+    ''' generate counts from hitsummary files '''
+    accumulators = accumulators_new()
+    for summary_file in assembly_summaries:
+        db_type = None
+        if re.search("gsnap.hitsummary2", summary_file):
+            db_type = 'nt'
+        elif  re.search("rapsearch2.hitsummary2", summary_file):
+            db_type = 'nr'
+        if db_type:
+            count_from_hitsummary(summary_file, db_type, accumulators)
+    return accumulators
+
+def count_from_hitsummary(summary_file, db_type, accumulators):
+    ''' generate count from one summary file '''
+    remove_file = False
+    with smarter_open(summary_file, "rb") as input_f:
+        line = smarter_readline(input_f)
+        while line:
+            line = line.decode('utf-8')
+            benchmark_linage = benchmark_lineage_from_header(line)
+            idseq_lineage = idseq_lineage_from_summary(line, db_type)
+            for taxid_rank, taxid_str in idseq_lineage:
+                accumulators[benchmark_linage][taxid_rank][taxid_str] += 1
+            line = smarter_readline(input_f)
+
 def count_annot_fasta(fasta_file):
     assert ".fasta" in fasta_file or ".fa" in fasta_file
     accumulators = accumulators_new()
@@ -206,6 +242,8 @@ def main(args):
     print(f"Scoring IDSEQ benchmark output {sample_result_dir}")
     sample, version = parse_result_dir(sample_result_dir)
     sample_data = glob_sample_data(sample, version)
+    sample_data['sample'] = sample
+    sample_data['version'] = version
     #print(json.dumps(sample_data, indent=4))
     r1, r2 = sample_data["input_fastq"]
     input_fastq_counts = count_fastq(r1)
@@ -216,7 +254,13 @@ def main(args):
     increment(post_qc_fasta_counts, count_fasta(r2))
     post_qc_fasta_counts = condense_equal(post_qc_fasta_counts)
     r = sample_data["post_alignment_fasta"][0]
-    annot_counts = count_annot_fasta(r)
+    assembly_summaries = sample_data["post_assembly_summary"]
+    if len(assembly_summaries) == 2:
+        # assembly data available
+        annot_counts = count_from_hitsummaries(assembly_summaries)
+    else:
+        # use alignment data instead
+        annot_counts = count_annot_fasta(r)
     # tally = {
     #     "input_fastq": input_fastq_counts,
     #     "post_qc_fasta": post_qc_fasta_counts,

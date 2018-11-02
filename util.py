@@ -64,7 +64,8 @@ def smart_glob(pattern, expected, ls_memory={}):  # pylint: disable=dangerous-de
         return fnmatch(filename, file_pattern)
     matching_files = list(filter(match_pattern, smart_ls(pdir, memory=ls_memory)))
     actual = len(matching_files)
-    assert expected == actual, f"Expected {expected} files for {pattern}, found {actual}"
+    if expected >= 0:
+        assert expected == actual, f"Expected {expected} files for {pattern}, found {actual}"
     return [f"{pdir}/{mf}" for mf in sorted(matching_files)]
 
 
