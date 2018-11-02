@@ -41,7 +41,7 @@ def glob_sample_data(sample, version):
         "post_alignment_fasta":
             smart_glob(f"{sample}/postprocess/{version}/taxid_annot.fasta", expected=1),
         "post_assembly_summary": # optional
-            smart_glob(f"{sample}/postprocess/{version}/assembly/*.hitsummary2.tab", expected=-1)
+            smart_glob(f"{sample}/postprocess/{version}/assembly/*.hitsummary2.tab", expected=[0, 2])
     }
 
 
@@ -72,13 +72,14 @@ def idseq_lineage_from_header(header_line):
     tokens = matches.group(0).split(":")
     return zip(tokens[0::2], tokens[1::2])
 
+
 def idseq_lineage_from_summary(summary_line, db_type):
     fields = summary_line.rstrip().split("\t")
     if fields[-1] == 'from_assembly':
         # remove the last element
         fields.pop()
     return zip([f"family_{db_type}", f"genus_{db_type}", f"species_{db_type}"],
-               fields[-1:-4:-1]) #
+               fields[-1:-4:-1])
 
 
 def benchmark_lineage_to_taxid_strs(benchmark_lineage):
@@ -181,9 +182,9 @@ def count_from_hitsummaries(assembly_summaries):
             count_from_hitsummary(summary_file, db_type, accumulators)
     return accumulators
 
+
 def count_from_hitsummary(summary_file, db_type, accumulators):
     ''' generate count from one summary file '''
-    remove_file = False
     with smarter_open(summary_file, "rb") as input_f:
         line = smarter_readline(input_f)
         while line:
@@ -193,6 +194,7 @@ def count_from_hitsummary(summary_file, db_type, accumulators):
             for taxid_rank, taxid_str in idseq_lineage:
                 accumulators[benchmark_linage][taxid_rank][taxid_str] += 1
             line = smarter_readline(input_f)
+
 
 def count_annot_fasta(fasta_file):
     assert ".fasta" in fasta_file or ".fa" in fasta_file
