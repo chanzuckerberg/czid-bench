@@ -1,17 +1,20 @@
 from genome import Genome
 
-if False:
-    NUM_READS = 10 * 1000
+
+NUM_READS_PER_ORGANISM = 10 * 1000
+
 
 # TODO: train "iseq" model
 MODELS = ["hiseq"] # ["novaseq", "miseq", "hiseq"]
+
 
 # We're committed to uniform.
 UNIFORM_ABUNDANCE = "uniform"
 
 
-if False:
-    TOP_6_ID_GENOMES = [
+# Used in standard benchmarks.
+def top_6_id_genomes():
+    return [
         Genome("bacteria", "klebsiella_pneumoniae_HS11286",
                [("subspecies", 1125630), ("species", 573), ("genus", 570), ("family", 543)],
                ["NC_016845.1"]),
@@ -44,14 +47,15 @@ if False:
     ]
 
 
+# Used in mutated virus benchmarks.
 def mutated_rhino_c_genome(percent):
     return Genome("viruses", "rhinovirus_c",
                   [("subspecies", 1000000000 + percent), ("species", 463676), ("genus", 12059), ("family", 12058)],
                   ["DERISI_HRC_{:03d}.1".format(percent)])
 
-MUTATED_RHINOVIRUS_C_GENOMES = [
-    mutated_rhino_c_genome(percent)
-    for percent in [100, 95, 90, 85, 74, 71, 65, 63, 58, 53, 48]
-]
 
-NUM_READS = 10000 * len(MUTATED_RHINOVIRUS_C_GENOMES)
+def mutaded_rhinovirus_c_genomes():
+    return  [
+        mutated_rhino_c_genome(percent)
+        for percent in [100, 95, 90, 85, 74, 71, 65, 63, 58, 53, 48]
+    ]
