@@ -17,15 +17,15 @@ import json
 from multiprocessing import cpu_count
 from collections import defaultdict
 from util import remove_safely, check_call, smart_open, ProgressTracker
-from params import MODELS, UNIFORM_ABUNDANCE, NUM_READS_PER_ORGANISM, top_6_id_genomes
+from params import MODELS, UNIFORM_ABUNDANCE, NUM_READS_PER_ORGANISM, top_6_id_genomes, human_host_removal, enterobacteriaceae_family, ecoli_cov
 from genome import Genome
 
 
 # Increment this as often as you like;  especially if a code change will result
 # in different content for the same output filename.  Versions above 10,000
 # are for experiment branches (not master).
-LOGICAL_VERSION = "9"
-GENOMES = top_6_id_genomes()
+LOGICAL_VERSION = "10"
+GENOMES = top_6_id_genomes() #ecoli_cov() enterobacteriaceae_family() #human_host_removal() 
 GENERATE_SINGLE_ORGANISM_BENCHMARKS = False
 
 
@@ -96,7 +96,8 @@ def augment_and_count_read_header(line, r, line_number):
     iss_read_id = line[:-3]
     zero_padded_read_count = "{:010d}".format(line_number // 4)
     serial_number = f"s{zero_padded_read_count}"
-    versioned_accession_id = iss_read_id.rsplit(sep, 1)[0].rsplit("_", 1)[0][1:]
+    #versioned_accession_id = iss_read_id.rsplit(sep, 1)[0].rsplit("_", 1)[0][1:]
+    versioned_accession_id = iss_read_id.rsplit(sep, 1)[0].rsplit("_", 2)[0][1:]
     g = Genome.by_accid[versioned_accession_id]
     benchmark_lineage = benchmark_lineage_tag(g)
     return f"{iss_read_id}__{benchmark_lineage}__{serial_number}\n", g.key
@@ -228,7 +229,7 @@ def run_iss_single_genome(g, num_reads, model, tmp_prefix, num_cpus):
     abundance = UNIFORM_ABUNDANCE
     output_prefix_single_genome = f"norg_{num_organisms}__nacc_{num_accessions}__{abundance}_weight_per_accession__{model}_reads__{g.key}__v{LOGICAL_VERSION}_"
     rc = ISSRunContext(tmp_prefix, output_prefix_single_genome)
-    iss_command_single_genome = f"iss generate --n_reads {num_reads} --genomes {g.filename} --model {model} --abundance {abundance} --gc_bias --output {rc.subdir}/{tmp_prefix} --cpus {num_cpus}"
+    iss_command_single_genome = f"iss generate --n_reads {num_reads} --genomes {g.filename} --model {model} --abundance {abundance} --gc_bias --output {rc.subdir}/{tmp_prefix} --cpus {num_cpus} --seed 0"
     run_iss(rc, iss_command_single_genome)
 
 
@@ -258,7 +259,7 @@ def run_iss_multiplexed(genomes, num_reads, model, tmp_prefix, num_cpus):
     rc = ISSRunContext(tmp_prefix, output_prefix_multiplexed)
     uniform_abundance_per_organism(genomes, rc.abundance_file)
     concatenate_fasta(genomes, rc.genomes_file)
-    iss_multiplexed_command = f"iss generate --n_reads {num_reads} --genomes {rc.genomes_file} --model {model} --abundance_file {rc.abundance_file} --gc_bias --output {rc.subdir}/{tmp_prefix} --cpus {num_cpus}"
+    iss_multiplexed_command = f"iss generate --n_reads {num_reads} --genomes {rc.genomes_file} --model {model} --abundance_file {rc.abundance_file} --gc_bias --output {rc.subdir}/{tmp_prefix} --cpus {num_cpus} --seed 0"
     run_iss(rc, iss_multiplexed_command)
 
 
