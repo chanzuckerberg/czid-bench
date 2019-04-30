@@ -25,7 +25,7 @@ from genome import Genome
 # in different content for the same output filename.  Versions above 10,000
 # are for experiment branches (not master).
 LOGICAL_VERSION = "10"
-GENOMES = top_6_id_genomes() #ecoli_cov() enterobacteriaceae_family() #human_host_removal() 
+GENOMES = human_host_removal() # top_6_id_genomes() ecoli_cov() enterobacteriaceae_family() 
 GENERATE_SINGLE_ORGANISM_BENCHMARKS = False
 
 
