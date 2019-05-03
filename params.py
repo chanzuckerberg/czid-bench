@@ -165,5 +165,5 @@ def mutated_rhino_c_genome(percent):
 def mutated_rhinovirus_c_genomes():
     return  [
         mutated_rhino_c_genome(percent)
-        for percent in [100, 99, 95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25]
+        for percent in [100, 95, 90, 85, 74, 71, 65, 63, 58, 53, 48] #[100, 99, 95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25]
     ]
