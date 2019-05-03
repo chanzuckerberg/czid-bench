@@ -162,8 +162,8 @@ def mutated_rhino_c_genome(percent):
                   ["DERISI_HRC_{:03d}.1".format(percent)])
 
 
-def mutaded_rhinovirus_c_genomes():
+def mutated_rhinovirus_c_genomes():
     return  [
         mutated_rhino_c_genome(percent)
-        for percent in [100, 95, 90, 85, 74, 71, 65, 63, 58, 53, 48]
+        for percent in [100, 99, 95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25]
     ]

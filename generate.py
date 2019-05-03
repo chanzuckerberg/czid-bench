@@ -17,7 +17,7 @@ import json
 from multiprocessing import cpu_count
 from collections import defaultdict
 from util import remove_safely, check_call, smart_open, ProgressTracker
-from params import MODELS, UNIFORM_ABUNDANCE, NUM_READS_PER_ORGANISM, top_6_id_genomes, human_host_removal, enterobacteriaceae_family, ecoli_cov
+from params import MODELS, UNIFORM_ABUNDANCE, NUM_READS_PER_ORGANISM, top_6_id_genomes, human_host_removal, enterobacteriaceae_family, ecoli_cov, mutated_rhinovirus_c_genomes
 from genome import Genome
 
 
@@ -25,7 +25,7 @@ from genome import Genome
 # in different content for the same output filename.  Versions above 10,000
 # are for experiment branches (not master).
 LOGICAL_VERSION = "10"
-GENOMES = human_host_removal() # top_6_id_genomes() ecoli_cov() enterobacteriaceae_family() 
+GENOMES = mutated_rhinovirus_c_genomes() # human_host_removal() top_6_id_genomes() ecoli_cov() enterobacteriaceae_family() 
 GENERATE_SINGLE_ORGANISM_BENCHMARKS = False
 
 
