@@ -1,5 +1,5 @@
 # A readable name for the benchmark
-description: List of relavant genomes to use on standard benchmarks
+description: List of relevant genomes to use on standard benchmarks
 # Number of reads per organism
 reads_per_organism: 10000
 # The sequencer model to emulate (determines the error model used by iss)
