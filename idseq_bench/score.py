@@ -47,6 +47,7 @@ def glob_sample_data(sample, version):
 
 def parse_result_dir(sample_result_dir):
     "Deconstruct '<sample_path>/results/2.8' into ('<sample_path>', '2.8')"
+    # TODO: replace by regex
     try:
         assert "/results/" in sample_result_dir
         before, after = sample_result_dir.split("/results/")
@@ -240,6 +241,8 @@ def truncprec(fpn, prec):
 
 def main():
     args = sys.argv
+    # TODO: add argument parser
+    print(f"[DEBUG] args: {args}")
     assert len(args) == 2, "Sample dir argument is required.  See usage."
     sample_result_dir = args[1]
     print(f"Scoring IDSEQ benchmark output {sample_result_dir}")
