@@ -25,7 +25,7 @@ setup(
     long_description_content_type='text/markdown',
     url='https://github.com/chanzuckerberg/idseq-bench',
     author='Chan Zuckerberg Initiative',
-    author_email='code@idseq.net',
+    author_email='help@idseq.net',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Metagenomic Researchers',
