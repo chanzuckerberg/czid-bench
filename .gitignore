@@ -8,6 +8,7 @@ tmp_[0-9]*
 *.fasta.gz
 *.fa.gz
 *.size
+iss_version.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

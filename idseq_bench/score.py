@@ -13,7 +13,7 @@ import sys
 import json
 import re
 from collections import defaultdict
-from util import smarter_open, smarter_readline, smart_glob
+from .util import smarter_open, smarter_readline, smart_glob
 
 
 # TODO: Use NamedTuple instead.
