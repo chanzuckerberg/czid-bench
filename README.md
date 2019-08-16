@@ -24,46 +24,76 @@ So far just a thin wrapper around [InSilicoSeq](https://insilicoseq.readthedocs.
 
 # setup
 ```
-pip3 install InSilicoSeq
-pip3 install ncbi-acc-download
+pip3 install git+https://github.com/chanzuckerberg/idseq-bench.git --upgrade
 ```
 
 # running
 ```
-python3 ../generate.py
+idseq-bench-generate config_file.yaml
 ```
 
-This produces zipped fastq files that you can upload to the [IDseq Portal](https://idseq.net) via [IDSEQ-CLI](https://github.com/chanzuckerberg/idseq-cli).
+This produces zipped fastq files and config files to generate them. You can upload the fastq files to the [IDseq Portal](https://idseq.net) via [IDSEQ-CLI](https://github.com/chanzuckerberg/idseq-cli).
+
+# help
+```
+idseq-bench-generate -h
+```
+
 
 # selecting organisms and chromosomes
-Add/modify entries like this in `params.py`
+Create a yaml file in the following format:
 ```
-    Genome("fungi", "aspergillus_fumigatus",
-           [("subspecies", 330879), ("species", 746128), ("genus", 5052), ("family", 1131492)],
-           ["NC_007194.1", "NC_007195.1", "NC_007196.1", "NC_007197.1", "NC_007198.1", "NC_007199.1",
-            "NC_007200.1", "NC_007201.1"],
-           "https://www.ncbi.nlm.nih.gov/genome/18?genome_assembly_id=22576"),
+# A readable name for the benchmark
+description: List of relevant genomes to use on standard benchmarks
+# Number of reads per organism
+reads_per_organism: 10000
+# The sequencer model to emulate (determines the error model used by iss)
+# Possible values: novaseq, miseq, hiseq
+# It will generate one benchmark per specified model
+models:
+  - hiseq
+abundance: uniform
+genomes:
+  - category: fungi
+    organism: aspergillus_fumigatus
+    lineage:
+      - level: subspecies
+        tax_id: 330879
+      - level: species
+        tax_id: 746128
+      - level: genus
+        tax_id: 5052
+      - level: family
+        tax_id: 1131492
+    versioned_accession_ids:
+      - NC_007194.1
+      - NC_007195.1
+      - NC_007196.1
+      - NC_007197.1
+      - NC_007198.1
+      - NC_007199.1
+      - NC_007200.1
+      - NC_007201.1
+    genome_assembly_url: https://www.ncbi.nlm.nih.gov/genome/18?genome_assembly_id=22576
 ```
+
+See more examples in the examples folder.
 
 # tweaking InSilicoSeq options
-Edit [params.py](params.py) or [generate.py](generate.py) as desired, e.g., to select a different set of [error models](https://insilicoseq.readthedocs.io/en/latest/iss/model.html).
+You can select different sets of [error models](https://insilicoseq.readthedocs.io/en/latest/iss/model.html).
 
-If the output data changes, we expect the output file name to change as well.  It's always a good idea to increment
-LOGICAL_VERSION (whole numbers only) after making changes to the code.
-
-If your code or parameter changes are uncommitted, the program will refuse to run.   You can force it to run with the `--irreproducible` flag, but irreproducible outputs cannot be used for automated testing of the IDseq Portal.
+The generated filenames will include the package version used to create it.
 
 # interpreting the output
 Each output file name reflects the params of its generation, like so:
 ```
-norg_6__nacc_27__uniform_weight_per_organism__hiseq_reads__v4__[R1, R2].fastq.gz
+norg_6__nacc_27__uniform_weight_per_organism__hiseq_reads__v0.1.0__[R1, R2].fastq.gz
   -- number of organisms: 6
   -- number of accessions: 27
   -- distribution: uniform per organism
   -- error model: hiseq
   -- logical version: 4
 ```
-TODO:  Random generator seed control.
 
 We generate a summary file for each pair of fastqs, indicating read counts per organism,
 and the average coverage of the organism's genome.  Each pair counts as 2 reads / 300 bases,
@@ -90,7 +120,7 @@ scoring results.  We assume the pipelines would not cheat by inspecting those ta
 
 An even more detailed summary, including all ISS options, is generated in json format.
 
-# automated testing of IDseq Portal
+# For IDseq developers: automated testing of IDseq Portal
 
 Just upload an output folder to `s3://idseq-bench/<next-number>` and add
 an entry for it to `s3://idseq-bench/config.json` to specify frequency and environments in which that test should run.
@@ -99,7 +129,7 @@ an entry for it to `s3://idseq-bench/config.json` to specify frequency and envir
 
 After a benchmark sample has completed running through the IDseq Portal, the QC pass rate and recall per benchmark organism can be scored by running, e.g.,
 ```
-python3 score.py s3://idseq-samples-prod/samples/16/8848/results/2.8
+idseq-bench-score s3://idseq-samples-prod/samples/16/8848/results/2.8
 ```
 which produces JSON formatted output like so
 ```
