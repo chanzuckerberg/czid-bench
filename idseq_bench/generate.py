@@ -35,7 +35,7 @@ class BenchmarkConfigError(Exception):
 
 
 class ISSRunContext:
-    """Execution context for each InsilicoSeq run.  Encapsulates all temp/intermediate/output files, but not the logic.
+    """Execution context for each InSilicoSeq run.  Encapsulates all temp/intermediate/output files, but not the logic.
     """
 
     iss_version = None
