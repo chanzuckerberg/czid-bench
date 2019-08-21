@@ -4,7 +4,8 @@
 import json
 import sys
 
-def main(args):
+def main():
+    args = sys.argv
     assert len(args) >= 2, "Usage: python3 compare.py <score1.json>  [<score2.json> <score3.json> ...]"
     bundles = []
 
@@ -36,8 +37,8 @@ def main(args):
                 details["genus"]["nt"], details["genus"]["nr"], details["genus"]["best_post_qc"],
                 details["species"]["nt"], details["species"]["nr"], details["species"]["best_post_qc"]
             ]
-            fields = list(map(lambda u: str(u), fields))
+            fields = list(map(str, fields))
             print("\t".join(fields))
 
 if __name__ == "__main__":
-    main(sys.argv)
+    main()

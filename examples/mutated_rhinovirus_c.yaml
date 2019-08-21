@@ -1,0 +1,153 @@
+# A readable name for the benchmark
+description: List of genomes with different mutation amount to a Rhinovirus C
+# Number of reads per organism
+reads_per_organism: 10000
+# The sequencer model to emulate (determines the error model used by iss)
+# Possible values: novaseq, miseq, hiseq"
+models:
+  - hiseq
+abundance: uniform
+genomes:
+  - category: viruses
+    organism: rhinovirus_c
+    lineage:
+      - level: subspecies
+        tax_id: 1000000100
+      - level: species
+        tax_id: 463676
+      - level: genus
+        tax_id: 12059
+      - level: family
+        tax_id: 12058
+    versioned_accession_ids:
+      - DERISI_HRC_100.1
+  - category: viruses
+    organism: rhinovirus_c
+    lineage:
+      - level: subspecies
+        tax_id: 1000000095
+      - level: species
+        tax_id: 463676
+      - level: genus
+        tax_id: 12059
+      - level: family
+        tax_id: 12058
+    versioned_accession_ids:
+      - DERISI_HRC_095.1
+  - category: viruses
+    organism: rhinovirus_c
+    lineage:
+      - level: subspecies
+        tax_id: 1000000090
+      - level: species
+        tax_id: 463676
+      - level: genus
+        tax_id: 12059
+      - level: family
+        tax_id: 12058
+    versioned_accession_ids:
+      - DERISI_HRC_090.1
+  - category: viruses
+    organism: rhinovirus_c
+    lineage:
+      - level: subspecies
+        tax_id: 1000000085
+      - level: species
+        tax_id: 463676
+      - level: genus
+        tax_id: 12059
+      - level: family
+        tax_id: 12058
+    versioned_accession_ids:
+      - DERISI_HRC_085.1
+  - category: viruses
+    organism: rhinovirus_c
+    lineage:
+      - level: subspecies
+        tax_id: 1000000074
+      - level: species
+        tax_id: 463676
+      - level: genus
+        tax_id: 12059
+      - level: family
+        tax_id: 12058
+    versioned_accession_ids:
+      - DERISI_HRC_074.1
+  - category: viruses
+    organism: rhinovirus_c
+    lineage:
+      - level: subspecies
+        tax_id: 1000000071
+      - level: species
+        tax_id: 463676
+      - level: genus
+        tax_id: 12059
+      - level: family
+        tax_id: 12058
+    versioned_accession_ids:
+      - DERISI_HRC_071.1
+  - category: viruses
+    organism: rhinovirus_c
+    lineage:
+      - level: subspecies
+        tax_id: 1000000065
+      - level: species
+        tax_id: 463676
+      - level: genus
+        tax_id: 12059
+      - level: family
+        tax_id: 12058
+    versioned_accession_ids:
+      - DERISI_HRC_065.1
+  - category: viruses
+    organism: rhinovirus_c
+    lineage:
+      - level: subspecies
+        tax_id: 1000000063
+      - level: species
+        tax_id: 463676
+      - level: genus
+        tax_id: 12059
+      - level: family
+        tax_id: 12058
+    versioned_accession_ids:
+      - DERISI_HRC_063.1
+  - category: viruses
+    organism: rhinovirus_c
+    lineage:
+      - level: subspecies
+        tax_id: 1000000058
+      - level: species
+        tax_id: 463676
+      - level: genus
+        tax_id: 12059
+      - level: family
+        tax_id: 12058
+    versioned_accession_ids:
+      - DERISI_HRC_058.1
+  - category: viruses
+    organism: rhinovirus_c
+    lineage:
+      - level: subspecies
+        tax_id: 1000000053
+      - level: species
+        tax_id: 463676
+      - level: genus
+        tax_id: 12059
+      - level: family
+        tax_id: 12058
+    versioned_accession_ids:
+      - DERISI_HRC_053.1
+  - category: viruses
+    organism: rhinovirus_c
+    lineage:
+      - level: subspecies
+        tax_id: 1000000048
+      - level: species
+        tax_id: 463676
+      - level: genus
+        tax_id: 12059
+      - level: family
+        tax_id: 12058
+    versioned_accession_ids:
+      - DERISI_HRC_048.1

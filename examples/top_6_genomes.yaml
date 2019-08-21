@@ -1,0 +1,113 @@
+# A readable name for the benchmark
+description: List of relevant genomes to use on standard benchmarks
+# Number of reads per organism
+reads_per_organism: 10000
+# The sequencer model to emulate (determines the error model used by iss)
+# Possible values: novaseq, miseq, hiseq
+# It will generate one benchmark per specified model
+models:
+  - hiseq
+abundance: uniform
+genomes:
+  - category: bateria
+    organism: klebsiella_pneumoniae_HS11286
+    lineage:
+      - level: subspecies
+        tax_id: 1125630
+      - level: species
+        tax_id: 573
+      - level: genus
+        tax_id: 570
+      - level: family
+        tax_id: 543
+    versioned_accession_ids:
+      - NC_016845.1
+  - category: fungi
+    organism: aspergillus_fumigatus
+    lineage:
+      - level: subspecies
+        tax_id: 330879
+      - level: species
+        tax_id: 746128
+      - level: genus
+        tax_id: 5052
+      - level: family
+        tax_id: 1131492
+    versioned_accession_ids:
+      - NC_007194.1
+      - NC_007195.1
+      - NC_007196.1
+      - NC_007197.1
+      - NC_007198.1
+      - NC_007199.1
+      - NC_007200.1
+      - NC_007201.1
+    genome_assembly_url: https://www.ncbi.nlm.nih.gov/genome/18?genome_assembly_id=22576
+  - category: viruses
+    organism: rhinovirus_c
+    lineage:
+      - level: subspecies
+        tax_id: 0
+      - level: species
+        tax_id: 463676
+      - level: genus
+        tax_id: 12059
+      - level: family
+        tax_id: 12058
+    versioned_accession_ids:
+      - MG148341.1
+  - category: viruses
+    organism: chikungunya
+    lineage:
+      - level: subspecies
+        tax_id: 0
+      - level: species
+        tax_id: 37124
+      - level: genus
+        tax_id: 11019
+      - level: family
+        tax_id: 11018
+    versioned_accession_ids:
+      - MG049915.1
+  - category: bateria
+    organism: staphylococcus_aureus
+    lineage:
+      - level: subspecies
+        tax_id: 93061
+      - level: species
+        tax_id: 1280
+      - level: genus
+        tax_id: 1279
+      - level: family
+        tax_id: 90964
+    versioned_accession_ids:
+      - NC_007795.1
+    genome_assembly_url: https://www.ncbi.nlm.nih.gov/genome/154?genome_assembly_id=299272
+  - category: protista
+    organism: plasmodium_falciuparum
+    lineage:
+      - level: subspecies
+        tax_id: 36329
+      - level: species
+        tax_id: 5833
+      - level: genus
+        tax_id: 5820
+      - level: family
+        tax_id: 1639119
+    versioned_accession_ids:
+      - NC_004325.2
+      - NC_037280.1
+      - NC_000521.4
+      - NC_004318.2
+      - NC_004326.2
+      - NC_004327.3
+      - NC_004328.3
+      - NC_004329.3
+      - NC_004330.2
+      - NC_037281.1
+      - NC_037282.1
+      - NC_037284.1
+      - NC_004331.3
+      - NC_037283.1
+      - NC_036769.1
+    genome_assembly_url: https://www.ncbi.nlm.nih.gov/genome/33?genome_assembly_id=22642

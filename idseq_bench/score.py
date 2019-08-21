@@ -13,7 +13,7 @@ import sys
 import json
 import re
 from collections import defaultdict
-from util import smarter_open, smarter_readline, smart_glob
+from .util import smarter_open, smarter_readline, smart_glob
 
 
 # TODO: Use NamedTuple instead.
@@ -238,7 +238,8 @@ def truncprec(fpn, prec):
     return int(fpn * prec + 0.5) / prec
 
 
-def main(args):
+def main():
+    args = sys.argv
     assert len(args) == 2, "Sample dir argument is required.  See usage."
     sample_result_dir = args[1]
     print(f"Scoring IDSEQ benchmark output {sample_result_dir}")
@@ -319,4 +320,4 @@ def main(args):
 
 
 if __name__ == "__main__":
-    main(sys.argv)
+    main()

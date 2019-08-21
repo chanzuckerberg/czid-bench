@@ -1,29 +1,29 @@
 import os
-from util import remove_safely, check_call
+from .util import remove_safely, check_call
 
-DOWNLOADS_SUBDIR = "downloads"
 
 class Genome:
 
     all = dict()
     by_accid = dict()
+    downloads_dir = "downloads"
 
-    def __init__(self, category, organism, lineage, versioned_accession_ids, genome_assembly_URL=None):
+    def __init__(self, category, organism, lineage, versioned_accession_ids, genome_assembly_url=None):
         self.category = category
         self.organism = organism
         self.lineage = lineage
-        assert ["subspecies", "species", "genus", "family"] == [l[0] for l in lineage]
-        self.subspecies_taxid, self.species_taxid, self.genus_taxid, self.family_taxid = [(l[1] or 0) for l in lineage]
+        assert ["subspecies", "species", "genus", "family"] == [l['level'] for l in lineage]
+        self.subspecies_taxid, self.species_taxid, self.genus_taxid, self.family_taxid = [(l['tax_id'] or 0) for l in lineage]
         self.taxid = self.subspecies_taxid or self.species_taxid
-        self.genome_assembly_URL = genome_assembly_URL
+        self.genome_assembly_URL = genome_assembly_url
         self.versioned_accession_ids = [Genome.ensure_versioned(vaccid) for vaccid in versioned_accession_ids]
         self.key = f"{category}__{organism}__{self.taxid}"
-        self.filename = f"{DOWNLOADS_SUBDIR}/{self.key}.fasta"
+        self.filename = f"{Genome.downloads_dir}/{self.key}.fasta"
         # The size (number of bases) is filled in by fetch_all()
         self.size = None
         Genome.all[self.key] = self
         for vaccid in self.versioned_accession_ids:
-            assert vaccid not in Genome.by_accid, "Accession ID {vaccid} should not occur in multiple genomes."
+            assert vaccid not in Genome.by_accid, f"Accession ID {vaccid} should not occur in multiple genomes."
             Genome.by_accid[vaccid] = self
 
     @staticmethod
@@ -35,13 +35,13 @@ class Genome:
 
     @staticmethod
     def fetch_versioned_accession_id(vaccid):  # e.g., "NC_004325.2"
-        output_file = f"{DOWNLOADS_SUBDIR}/{vaccid}.fa"
-        os.makedirs(DOWNLOADS_SUBDIR, exist_ok=True)
+        output_file = f"{Genome.downloads_dir}/{vaccid}.fa"
+        os.makedirs(Genome.downloads_dir, exist_ok=True)
         if os.path.isfile(output_file):
             print(f"{output_file} already exists, nice")
         else:
             try:
-                command = f"cd {DOWNLOADS_SUBDIR}; ncbi-acc-download --format fasta {vaccid} -e all"
+                command = f"cd {Genome.downloads_dir}; ncbi-acc-download --format fasta {vaccid} -e all"
                 check_call(command)
             except:
                 remove_safely(output_file)
