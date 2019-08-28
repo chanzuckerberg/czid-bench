@@ -251,7 +251,6 @@ def parse_and_validate_config(config_file):
     benchmark_config = yaml.safe_load(config_file)
 
     # Add basic validation for required fields
-    # TODO: deep and optional fields validation
     errors = [
         f"Config file must contain a field '{field}' of type <{field_type}>"
         for field, field_type in [
