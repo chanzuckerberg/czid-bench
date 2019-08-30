@@ -22,25 +22,25 @@ Benchmark generator for the [IDseq Portal](https://idseq.net).
 
 So far just a thin wrapper around [InSilicoSeq](https://insilicoseq.readthedocs.io/en/latest/).
 
-# setup
+## setup
 ```
 pip3 install git+https://github.com/chanzuckerberg/idseq-bench.git --upgrade
 ```
 
-# running
+## running
 ```
 idseq-bench-generate config_file.yaml
 ```
 
 This produces zipped fastq files and config files to generate them. You can upload the fastq files to the [IDseq Portal](https://idseq.net) via [IDSEQ-CLI](https://github.com/chanzuckerberg/idseq-cli).
 
-# help
+## help
 ```
 idseq-bench-generate -h
 ```
 
 
-# selecting organisms and chromosomes
+## selecting organisms and chromosomes
 Create a yaml file in the following format:
 ```
 # A readable name for the benchmark
@@ -79,12 +79,12 @@ genomes:
 
 See more examples in the examples folder.
 
-# tweaking InSilicoSeq options
+## tweaking InSilicoSeq options
 You can select different sets of [error models](https://insilicoseq.readthedocs.io/en/latest/iss/model.html).
 
 The generated filenames will include the package version used to create it.
 
-# interpreting the output
+## interpreting the output
 Each output file name reflects the params of its generation, like so:
 ```
 norg_6__nacc_27__uniform_weight_per_organism__hiseq_reads__v0.1.0__[R1, R2].fastq.gz
@@ -120,12 +120,12 @@ scoring results.  We assume the pipelines would not cheat by inspecting those ta
 
 An even more detailed summary, including all ISS options, is generated in json format.
 
-# For IDseq developers: automated testing of IDseq Portal
+## For IDseq developers: automated testing of IDseq Portal
 
 Just upload an output folder to `s3://idseq-bench/<next-number>` and add
 an entry for it to `s3://idseq-bench/config.json` to specify frequency and environments in which that test should run.
 
-# scoring an IDseq Portal Run
+## scoring an IDseq Portal Run
 
 After a benchmark sample has completed running through the IDseq Portal, the QC pass rate and recall per benchmark organism can be scored by running, e.g.,
 ```
@@ -184,11 +184,11 @@ which produces JSON formatted output like so
           ...
 ```
 
-## Local files
+### Local files
 
 For users who lack direct access to S3, scoring also works on a local download of sample results.  However, you must organize any locally downloaded files in versioned subfolders to match the S3 structure illustrated in the example above. Use the option `-p <local_path>` or `--local-path <local_path>` to use the local folder instead.
 
-## Comparison to ground truth
+### Comparison to ground truth
 
 Users can also compare any sample against a provided ground truth file. This file should be a TSV file with the following fields (without headers):
 ```
@@ -211,4 +211,9 @@ To compare against a ground truth run the scoring script with the following opti
 
 ```
 idseq-bench-score <project_id> <sample_id> <pipeline_version:major.minor> -t <truth_file_1.tsv> <truth_file_2.tsv> ...
+```
+
+## help
+```
+idseq-bench-score -h
 ```
