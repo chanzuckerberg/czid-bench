@@ -184,7 +184,11 @@ which produces JSON formatted output like so
           ...
 ```
 
+## Local files
+
 For users who lack direct access to S3, scoring also works on a local download of sample results.  However, you must organize any locally downloaded files in versioned subfolders to match the S3 structure illustrated in the example above. Use the option `-p` or `--local-path` to use the local folder instead.
+
+## Comparison to ground truth
 
 Users can also compare any sample against a provided ground truth file. This file should be a TSV file with the following fields (without headers):
 ```
