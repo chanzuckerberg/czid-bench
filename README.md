@@ -186,7 +186,7 @@ which produces JSON formatted output like so
 
 ## Local files
 
-For users who lack direct access to S3, scoring also works on a local download of sample results.  However, you must organize any locally downloaded files in versioned subfolders to match the S3 structure illustrated in the example above. Use the option `-p` or `--local-path` to use the local folder instead.
+For users who lack direct access to S3, scoring also works on a local download of sample results.  However, you must organize any locally downloaded files in versioned subfolders to match the S3 structure illustrated in the example above. Use the option `-p <local_path>` or `--local-path <local_path>` to use the local folder instead.
 
 ## Comparison to ground truth
 
