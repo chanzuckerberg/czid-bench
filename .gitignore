@@ -116,3 +116,4 @@ venv.bak/
 
 # scoring data cache
 .cache_scoring/
+test_data
