@@ -203,7 +203,7 @@ e.g
 ...
 ```
 
-TO compare against a ground truth run the scoring script with the following options:
+To compare against a ground truth run the scoring script with the following options:
 
 ```
 idseq-bench-score <project_id> <sample_id> <pipeline_version:major.minor> -t <truth_file_1.tsv> <truth_file_2.tsv> ...
