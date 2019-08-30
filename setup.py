@@ -38,7 +38,9 @@ setup(
     python_requires='>=3.6, <4',
     install_requires=[
         'InSilicoSeq',
-        'ncbi-acc-download'
+        'ncbi-acc-download',
+        'numpy',
+        'scikit-learn'
     ],
     entry_points={
         'console_scripts': [

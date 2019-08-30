@@ -1,3 +1,4 @@
+import re
 import os
 import gzip
 import time
@@ -63,9 +64,12 @@ def check_output(command, quiet=False):
 
 def smart_glob(pattern, expected_num_files, ls_memory=None):
   pdir, file_pattern = pattern.rsplit("/", 1)
-  def match_pattern(filename):
-    return fnmatch(filename, file_pattern)
-  matching_files = list(filter(match_pattern, smart_ls(pdir, memory=ls_memory)))
+  listed_files = smart_ls(pdir, memory=ls_memory)
+  matching_files = list(
+    filter(
+      lambda filename: re.match(file_pattern, filename),
+      listed_files))
+
   actual_num_files = len(matching_files)
   if isinstance(expected_num_files, int):
     expected_num_files = [expected_num_files]
