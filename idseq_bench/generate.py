@@ -20,6 +20,7 @@ from multiprocessing import cpu_count
 from collections import defaultdict
 import yaml
 from .util import remove_safely, check_call, smart_open, ProgressTracker
+from .parsers import extract_accession_id
 from .genome import Genome
 from . import __version__
 
@@ -71,17 +72,10 @@ def benchmark_lineage_tag(g):
     return f"benchmark_lineage_{g.subspecies_taxid}_{g.species_taxid}_{g.genus_taxid}_{g.family_taxid}"
 
 
-def extract_accession_id(raw_line):
-    try:
-        return re.search(r'^(@.+\.\d+)', raw_line).group(1)
-    except AttributeError:
-        return None
-
-
 def augment_and_count_read_header(line, line_number):
     iss_read_id = extract_accession_id(line)
     serial_number = "s{:010d}".format(line_number // 4)
-    g = Genome.by_accid[iss_read_id[1:]]
+    g = Genome.by_accid[iss_read_id]
     benchmark_lineage = benchmark_lineage_tag(g)
     return f"{iss_read_id}__{benchmark_lineage}__{serial_number}\n", g.key
 
@@ -257,7 +251,6 @@ def parse_and_validate_config(config_file):
     benchmark_config = yaml.safe_load(config_file)
 
     # Add basic validation for required fields
-    # TODO: deep and optional fields validation
     errors = [
         f"Config file must contain a field '{field}' of type <{field_type}>"
         for field, field_type in [

@@ -22,25 +22,25 @@ Benchmark generator for the [IDseq Portal](https://idseq.net).
 
 So far just a thin wrapper around [InSilicoSeq](https://insilicoseq.readthedocs.io/en/latest/).
 
-# setup
+## setup
 ```
 pip3 install git+https://github.com/chanzuckerberg/idseq-bench.git --upgrade
 ```
 
-# running
+## running
 ```
 idseq-bench-generate config_file.yaml
 ```
 
 This produces zipped fastq files and config files to generate them. You can upload the fastq files to the [IDseq Portal](https://idseq.net) via [IDSEQ-CLI](https://github.com/chanzuckerberg/idseq-cli).
 
-# help
+## help
 ```
 idseq-bench-generate -h
 ```
 
 
-# selecting organisms and chromosomes
+## selecting organisms and chromosomes
 Create a yaml file in the following format:
 ```
 # A readable name for the benchmark
@@ -79,12 +79,12 @@ genomes:
 
 See more examples in the examples folder.
 
-# tweaking InSilicoSeq options
+## tweaking InSilicoSeq options
 You can select different sets of [error models](https://insilicoseq.readthedocs.io/en/latest/iss/model.html).
 
 The generated filenames will include the package version used to create it.
 
-# interpreting the output
+## interpreting the output
 Each output file name reflects the params of its generation, like so:
 ```
 norg_6__nacc_27__uniform_weight_per_organism__hiseq_reads__v0.1.0__[R1, R2].fastq.gz
@@ -120,66 +120,100 @@ scoring results.  We assume the pipelines would not cheat by inspecting those ta
 
 An even more detailed summary, including all ISS options, is generated in json format.
 
-# For IDseq developers: automated testing of IDseq Portal
+## For IDseq developers: automated testing of IDseq Portal
 
 Just upload an output folder to `s3://idseq-bench/<next-number>` and add
 an entry for it to `s3://idseq-bench/config.json` to specify frequency and environments in which that test should run.
 
-# scoring an IDseq Portal Run
+## scoring an IDseq Portal Run
 
 After a benchmark sample has completed running through the IDseq Portal, the QC pass rate and recall per benchmark organism can be scored by running, e.g.,
 ```
-idseq-bench-score s3://idseq-samples-prod/samples/16/8848/results/2.8
+idseq-bench-score <project_id> <sample_id> <pipeline_version:major.minor>
 ```
 which produces JSON formatted output like so
 ```
 {
-    "sample_data": {
-        "input_fastq": [
-            "s3://idseq-samples-prod/samples/16/8848/fastqs/norg_6__nacc_27__uniform_weight_per_organism__hiseq_reads__v4__R1.fastq.gz",
-            "s3://idseq-samples-prod/samples/16/8848/fastqs/norg_6__nacc_27__uniform_weight_per_organism__hiseq_reads__v4__R2.fastq.gz"
-        ],
-        "post_qc_fasta": [
-            "s3://idseq-samples-prod/samples/16/8848/results/2.8/gsnap_filter_1.fa",
-            "s3://idseq-samples-prod/samples/16/8848/results/2.8/gsnap_filter_2.fa"
-        ],
-        "post_alignment_fasta": [
-            "s3://idseq-samples-prod/samples/16/8848/postprocess/2.8/taxid_annot.fasta"
-        ]
-    },
-    "stats": {
-        "benchmark_lineage_0_37124_11019_11018": {
-            "total_reads": {
-                "count": 16642
-            },
-            "survived_qc": {
-                "count": 14044,
-                "fraction": 0.8439
-            },
-            "recalled_correctly": {
-                "family": {
-                    "nt": 10206,
-                    "nr": 3856,
-                    "best_post_qc": 0.7267
-                },
-                "genus": {
-                    "nt": 10206,
-                    "nr": 3856,
-                    "best_post_qc": 0.7267
-                },
-                "species": {
-                    "nt": 10206,
-                    "nr": 3743,
-                    "best_post_qc": 0.7267
-                }
-            }
+  "per_rank": {
+    "family": {
+      "NT": {
+        "543": {
+          "total_reads": 10000,
+          "post_qc_reads": 8476,
+          "recall_per_read": {
+            "count": 8461,
+            "value": 0.9982302973100519
+          }
         },
-        "benchmark_lineage_0_463676_12059_12058": {
-            "total_reads": {
-                "count": 16366
-            },
         ...
+        "accuracy": {
+          "count": 80137,
+          "value": 0.8820803522289489
+        },
+        "total_simulated_taxa": 12,
+        "total_correctly_identified_taxa": 11,
+        "total_identified_taxa": 539,
+        "recall": 0.9166666666666666,
+        "precision": 0.02040816326530612,
+        "f1-score": 0.03992740471869328
+        "aupr": 0.9751017478206347,
+        "l1_norm": 0.8389712437238702,
+        "l2_norm": 0.07556827265305112
+      },
+      "NR": {
+        "543": {
+          "total_reads": 10000,
+          "post_qc_reads": 8476,
+          "recall_per_read": {
+            "count": 7951,
+            "value": 0.9380604058518169
+          }
+        },
+        ...
+      },
+      "concordance": {
+        "11018": {
+          "count": 16048,
+          "value": 1.9154929577464788
+        },
+        ...
+    },
+    "genus": {
+      "NT": {
+        "570": {
+          ...
 ```
-Note that `recalled_correctly.best_post_qc` represents the higher of `recalled_correctly.nt` and `recalled_correctly.nr` divided by `survived_qc.count`.  For more details, see the code in [score.py](score.py).
 
-For users who lack direct access to S3, scoring also works on a local download of sample results.  However, you must organize any locally downloaded files in versioned subfolders to match the S3 structure illustrated in the example above.  Alternatively, edit `glob_sample_data` in [score.py](score.py) to alter the expected folder structure so it matches your local download.
+### Local files
+
+For users who lack direct access to S3, scoring also works on a local download of sample results.  However, you must organize any locally downloaded files in versioned subfolders to match the S3 structure illustrated in the example above. Use the option `-p <local_path>` or `--local-path <local_path>` to use the local folder instead.
+
+### Comparison to ground truth
+
+Users can also compare any sample against a provided ground truth file. This file should be a TSV file with the following fields (without headers):
+```
+<taxon_id>	<absolute_abundance>	<relative_abundance>	<rank>	<taxon_name>
+```
+
+e.g
+
+```
+366648	100000.00000	0.01746	species	Xanthomonas fuscans
+1685	100000.00000	0.01746	species	Bifidobacterium breve
+486	100000.00000	0.01746	species	Neisseria lactamica
+2751	100000.00000	0.01746	species	Carnobacterium maltaromaticum
+28123	100000.00000	0.01746	species	Porphyromonas asaccharolytica
+118562	100000.00000	0.01746	species	Arthrospira platensis
+...
+```
+
+To compare against a ground truth run the scoring script with the following options:
+
+```
+idseq-bench-score <project_id> <sample_id> <pipeline_version:major.minor> -t <truth_file_1.tsv> <truth_file_2.tsv> ...
+```
+
+## help
+```
+idseq-bench-score -h
+```

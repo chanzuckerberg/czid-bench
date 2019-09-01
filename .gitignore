@@ -113,3 +113,7 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# scoring data cache
+.cache_scoring/
+test_data
