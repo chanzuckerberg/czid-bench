@@ -166,9 +166,9 @@ class IDseqSampleFileManager():
     except GeneratorExit:
       # If the generator is closing, we should just reraise and not output an error
       raise
-    except Exception as e:
+    except:
       print(f"[ERROR] Parsing read number {read_number} in {fastx_file}")
-      raise e
+      raise
 
   def input_files(self):
     return smart_glob(self.apply_context(INPUT_FASTQ_FILE_PATTERN), expected_num_files=[1, 2])

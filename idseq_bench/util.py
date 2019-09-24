@@ -3,13 +3,10 @@ import os
 import re
 import subprocess
 import time
-import boto3
 from io import TextIOWrapper
 from urllib.parse import urlparse
 from fnmatch import fnmatch
 
-
-S3_CLIENT = boto3.client('s3')
 
 class ExpectedNumFilesException(Exception):
   def __init__(self, pattern, actual, expected):
