@@ -1,10 +1,15 @@
-import re
-import os
 import gzip
-import time
+import os
+import re
 import subprocess
+import time
+import boto3
+from io import TextIOWrapper
+from urllib.parse import urlparse
 from fnmatch import fnmatch
 
+
+S3_CLIENT = boto3.client('s3')
 
 class ExpectedNumFilesException(Exception):
   def __init__(self, pattern, actual, expected):
@@ -14,30 +19,6 @@ class ExpectedNumFilesException(Exception):
 def remove_safely(fn):
   if os.path.isfile(fn):
     os.remove(fn)
-
-
-def smart_open(filename, mode):
-  if filename.endswith(".gz"):
-    return gzip.open(filename, mode)
-  return open(filename, mode)
-
-
-def smarter_open(filename, quiet=False):
-  if filename.startswith("s3://"):
-    s3cat = f"aws s3 cp {filename} -"
-    if filename.endswith(".gz"):
-      s3cat += " | gzip -dc"
-    if not quiet:
-      print(repr(s3cat))
-    return subprocess.Popen(s3cat, shell=True, stdout=subprocess.PIPE)
-  return smart_open(filename, "rb")
-
-
-def smarter_readline(f):
-  if hasattr(f, "stdout"):
-    return f.stdout.readline()
-  return f.readline()
-
 
 def chop(txt, suffix):
   assert txt.endswith(suffix)

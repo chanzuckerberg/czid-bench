@@ -3,9 +3,9 @@ import re
 from collections import defaultdict
 from sklearn.metrics import average_precision_score
 import numpy as np
-from idseq_bench.util import smart_glob, smarter_open, smarter_readline
+from idseq_bench.util import smart_glob
 from idseq_bench.parsers import extract_accession_id, extract_fast_file_type_from_path
-
+from smart_open import open as smart_open
 
 STORE = 's3://'
 ENV_DIR = f"{{store}}idseq-samples-{{env}}"
@@ -111,11 +111,10 @@ class IDseqSampleFileManager():
     return matches.group("read_id")
 
   def hit_summary_entries(self, summary_file, skip_benchmark_lineage=False):
-    with smarter_open(summary_file) as input_file:
-      line = smarter_readline(input_file)
-      while line:
-        line = line.decode('UTF-8')
-        try:
+    try:
+      with smart_open(summary_file, 'rb') as input_file:
+        for line in input_file:
+          line = line.decode('UTF-8')
           entry = {}
           entry['benchmark_lineage'] = None if skip_benchmark_lineage else self.parse_benchmark_lineage(line)
           entry['hit_summary_lineage'] = self.parse_hit_summary_lineage(line)
@@ -123,10 +122,12 @@ class IDseqSampleFileManager():
           entry['line'] = line
 
           yield entry
-          line = smarter_readline(input_file)
-        except:
-          print(f"[ERROR] Parsing file: {summary_file}")
-          raise
+    except GeneratorExit:
+      # If the generator is closing, we should just reraise and not output an error
+      raise
+    except:
+      print(f"[ERROR] Parsing file: {summary_file}")
+      raise
 
   def post_assembly_hit_summary_entries(self, db_type, skip_benchmark_lineage=False):
     return self.hit_summary_entries(
@@ -152,19 +153,20 @@ class IDseqSampleFileManager():
     lines_per_entry = 4 if file_type == "q" else 2
     read_number = 1
     try:
-      with smarter_open(fastx_file) as input_file:
-        entry_first_line = smarter_readline(input_file).decode("utf-8")
+      with smart_open(fastx_file) as input_file:
+        entry_first_line = input_file.readline()
         while entry_first_line:
           entry = self.parse_fastx_entry([entry_first_line] + [
-            smarter_readline(input_file).decode("utf-8")
+            input_file.readline()
             for _ in range(lines_per_entry - 1)
           ])
           yield entry
           read_number += 1
-          entry_first_line = smarter_readline(input_file).decode("utf-8")
-
+          entry_first_line = input_file.readline()
+    except GeneratorExit:
+      # If the generator is closing, we should just reraise and not output an error
+      raise
     except Exception as e:
-      # TODO: move to proper assertion
       print(f"[ERROR] Parsing read number {read_number} in {fastx_file}")
       raise e
 
@@ -173,7 +175,6 @@ class IDseqSampleFileManager():
 
   def post_qc_files(self):
     return smart_glob(self.apply_context(POST_QC_FASTA_FILE_PATTERN), expected_num_files=[1, 2])
-
 
 def lineage_key(lineage_dict):
   return "{species}:{genus}:{family}".format(**lineage_dict)
@@ -193,7 +194,6 @@ def hit_summary_counts_per_tax_id(idseq_file_manager, db_type):
     for rank, tax_id in entry['hit_summary_lineage'].items():
       counters[rank][tax_id] += 1
   return counters
-
 
 def hit_summary_concordance(idseq_file_manager):
   concordance_counters = defaultdict(int)
@@ -238,9 +238,9 @@ def count_hits_per_tax_id(idseq_file_manager):
 def score_benchmark(project_id, sample_id, pipeline_version, local_path=None):
   idseq_file_manager = IDseqSampleFileManager(project_id, sample_id, pipeline_version, local_path=local_path)
 
-  print(" * Counting read from input files")
+  print(" * Counting reads from input files")
   input_reads_by_tax_id = count_reads_per_benchmark_lineage(idseq_file_manager, idseq_file_manager.input_files())
-  print(" * Counting read from post qc files")
+  print(" * Counting reads from post qc files")
   post_qc_reads_by_tax_id = count_reads_per_benchmark_lineage(idseq_file_manager, idseq_file_manager.post_qc_files())
   print(" * Counting hits per benchmark lineage")
   hit_counters_nt, hit_counters_nr = count_hits_per_benchmark_lineage(idseq_file_manager)
