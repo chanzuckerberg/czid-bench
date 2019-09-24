@@ -207,10 +207,16 @@ def hit_summary_concordance(idseq_file_manager):
     nt_idseq_lineage, nt_read_id = nt_hit_summary_entry['hit_summary_lineage'], nt_hit_summary_entry['read_id']
     nr_idseq_lineage, nr_read_id = nr_hit_summary_entry['hit_summary_lineage'], nr_hit_summary_entry['read_id']
     for idseq_lineage, read_id in zip([nt_idseq_lineage, nr_idseq_lineage], [nt_read_id, nr_read_id]):
+      # if 11018 in idseq_lineage.values(): print(idseq_lineage, read_id, read_id in hit_by_read_id)
       if read_id in hit_by_read_id:
+        # if 11018 in idseq_lineage.values(): print("\tfound it")
         for rank, tax_id in idseq_lineage.items():
+          # if 11018 in idseq_lineage.values(): print(hit_by_read_id[read_id][rank], tax_id, hit_by_read_id[read_id][rank] == tax_id)
           if hit_by_read_id[read_id][rank] == tax_id:
             concordance_counters[tax_id] += 1
+            # if 11018 in idseq_lineage.values():
+            #   print(idseq_lineage, read_id)
+            #   print(f"\t\tmatch {rank} {tax_id}: {concordance_counters[tax_id]}")
         del hit_by_read_id[read_id]
       else:
         hit_by_read_id[read_id] = idseq_lineage
@@ -353,6 +359,15 @@ def score_sample(project_id, sample_id, pipeline_version, truth_taxa, local_path
   idseq_file_manager = IDseqSampleFileManager(project_id, sample_id, pipeline_version, local_path=local_path)
   hit_counters_nt, hit_counters_nr = count_hits_per_tax_id(idseq_file_manager)
 
+  # DEBUG
+  filter_out_ids = {32536, 61452, 9606, 9612, 9627, 9668, 9685, 9691, 9696}
+  ranks = sorted(truth_taxa.keys())
+  for hit_counters in [hit_counters_nt, hit_counters_nr]:
+    for tid in filter_out_ids:
+      for rank in ranks:
+        if tid in hit_counters[rank]:
+          del hit_counters[rank][tid]
+
   stats = {'per_rank': {}}
 
   ranks = sorted(truth_taxa.keys())
@@ -361,4 +376,16 @@ def score_sample(project_id, sample_id, pipeline_version, truth_taxa, local_path
     for db_type, hit_counters in zip(['NT', 'NR'], [hit_counters_nt, hit_counters_nr]):
       stats_per_rank[db_type] = metrics_per_sample(hit_counters[rank], truth_taxa[rank])
 
+  # DEBUG
+  # filter_out_ids = {32536, 61452, 9606, 9612, 9627, 9668, 9685, 9691, 9696}
+  # for rank in ranks:
+  #   for db_type, hit_counters in zip(['NT', 'NR'], [hit_counters_nt, hit_counters_nr]):
+  #     print(f"db_type = {db_type} rank = {rank}")
+  #     total = sum([v for k, v in hit_counters[rank].items() if k not in filter_out_ids])
+  #     keys = sorted([k for k in hit_counters[rank].keys() if k not in filter_out_ids])
+  #     for k in keys:
+  #       v = hit_counters[rank][k]
+  #       print(f"{k}\t{v}\t{v/total}")
+  #     print(json.dumps(hit_counters[rank], indent=2))
+  print("I AM HERE 1")
   return stats
