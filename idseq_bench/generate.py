@@ -19,10 +19,11 @@ import argparse
 from multiprocessing import cpu_count
 from collections import defaultdict
 import yaml
-from .util import remove_safely, check_call, smart_open, ProgressTracker
+from .util import remove_safely, check_call, ProgressTracker
 from .parsers import extract_accession_id
 from .genome import Genome
 from . import __version__
+from smart_open import open as smart_open
 
 
 class BenchmarkConfigError(Exception):

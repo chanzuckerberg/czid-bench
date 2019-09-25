@@ -37,10 +37,11 @@ setup(
     py_modules=['idseq-bench'],
     python_requires='>=3.6, <4',
     install_requires=[
-        'InSilicoSeq',
+        'InSilicoSeq==1.4.2',
         'ncbi-acc-download',
         'numpy',
-        'scikit-learn'
+        'scikit-learn',
+        'smart_open'
     ],
     entry_points={
         'console_scripts': [
