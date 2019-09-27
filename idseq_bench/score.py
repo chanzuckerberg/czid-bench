@@ -48,7 +48,7 @@ def main():
     help='Computed adjusted AUPR by forcing the precision/recall curve to be monotonic decreasing'
   )
   args = parser.parse_args()
-  print(args)
+
   stats_json = None
   if args.truth_files:
     truth_taxa = extract_truth(args.truth_files)
