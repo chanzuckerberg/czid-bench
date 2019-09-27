@@ -37,7 +37,7 @@ def main():
     help='Path of output file to write the results to (if not set results are written to stdout)')
   parser.add_argument(
     '-t', '--truth_files', type=argparse.FileType('r'), dest='truth_files', nargs='*',
-    help='Space separate list of truth files. Truth files are TSV files with the fields <tax_id, absolute abundance, relative abundance, rank, tax_name>'
+    help='Space separated list of truth files. Truth files are TSV files with the fields <tax_id, absolute abundance, relative abundance, rank, tax_name>'
   )
   parser.add_argument(
     '-p', '--local-path', type=str, dest='local_path',
