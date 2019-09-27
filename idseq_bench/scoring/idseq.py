@@ -1,7 +1,7 @@
 import json
 import re
 from collections import defaultdict
-from sklearn.metrics import average_precision_score
+from sklearn.metrics import auc, average_precision_score, precision_recall_curve, precision_recall_fscore_support
 import numpy as np
 from idseq_bench.util import smart_glob
 from idseq_bench.parsers import extract_accession_id, extract_fast_file_type_from_path
@@ -326,14 +326,16 @@ def metrics_per_sample(hit_counters, truth_taxa):
   stats['precision'] = precision
   stats['f1-score'] = 2 * recall * precision / (recall + precision)
 
-  # AUC
+  # AUPR - Area Under Precision and Recall curve
+
+
   tax_ids = hit_counters.keys()
   benchmark_tax_ids_set = set(taxon['tax_id'] for taxon in truth_taxa)
   max_abundance = max(hit_counters.values())
   y_true = [1 if tax_id in benchmark_tax_ids_set else 0 for tax_id in tax_ids]
-  probas_pred = [hit_counters[tax_id]/max_abundance for tax_id in tax_ids]
-  average_precision = average_precision_score(y_true, probas_pred)
-  stats['aupr'] = average_precision
+  y_score = [hit_counters[tax_id]/max_abundance for tax_id in tax_ids]
+  aupr_results = adjusted_aupr(y_true, y_score)
+  stats['aupr'] = aupr_results["aupr"]
   # In case we want to plot the curve for plotting the curve
   # precision, recall, thresholds = precision_recall_curve(y_true, probas_pred)
 
@@ -348,6 +350,43 @@ def metrics_per_sample(hit_counters, truth_taxa):
   stats['l2_norm'] = l2_norm
 
   return stats
+
+def adjusted_aupr(y_true, y_score, monotonic_adjustment=True):
+  # Adpated from https://github.com/yesimon/metax_bakeoff_2019/blob/master/plotting/Metagenomics%20Bench.ipynb
+  original_precision, recall, thresholds = precision_recall_curve(y_true, y_score)
+
+  precision = original_precision
+  if monotonic_adjustment:
+    # adjusts precision per each recall valu on the curve
+    # it guarantees that the curve is monotonic decreasing
+    precision_max_per_recall = defaultdict(float)
+    for r, p in zip(recall, original_precision):
+      precision_max_per_recall[r] = max(precision_max_per_recall[r], p)
+    adjusted_precision = []
+    for r, p in zip(recall, original_precision):
+      adjusted_precision.append(precision_max_per_recall[r])
+    precision = adjusted_precision
+
+  # force start at zero
+  if thresholds[0] == 0:
+    precision[0] = 0
+    recall[0] = recall[1]
+    recall = np.insert(recall, 0, 1)
+    precision = np.insert(precision, 0, 0)
+
+  aupr = auc(recall, precision)
+  y_pred = y_score.fillna(0).map(np.ceil).astype(int)
+  p, r, f, _ = precision_recall_fscore_support(y_true, y_pred, average='binary')
+  return {k: v for k, v in {
+    "original_precision": original_precision if monotonic_adjustment else None,
+    "precision": precision,
+    "aupr": aupr,
+    "recall": recall,
+    "thresholds": thresholds,
+    "average_precision": p,
+    "average_recall": r,
+    "average_fbeta_score": f
+  }.items() if v}
 
 def score_sample(project_id, sample_id, pipeline_version, truth_taxa, local_path=None):
   idseq_file_manager = IDseqSampleFileManager(project_id, sample_id, pipeline_version, local_path=local_path)
