@@ -97,7 +97,7 @@ def annotate_and_count_reads(input_fastq, output_fastq, counters, accumulators):
                 assert line[0] == "@", f"fastq format requires every 4th line to start with @"
                 augmented_read_header, g_key = augment_and_count_read_header(line, line_number)
                 counters[g_key] += 1
-                output_f.write(augmented_read_header.encode('utf-8'))
+                output_f.write(augmented_read_header)
                 for i in range(4):
                     line = input_f.readline()
                     line_number += 1
