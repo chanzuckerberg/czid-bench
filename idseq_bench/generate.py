@@ -51,7 +51,7 @@ class ISSRunContext:
         self.output_files = self.paired_files(output_prefix, "fastq.gz")
         self.tmp_files = self.paired_files(tmp_prefix, "fastq")
         self.summary_file_txt = f"{self.subdir}/summary.txt"
-        self.metadata_file_json = f"{self.subdir}/metadata.json"
+        self.metadata_file_json = f"{self.subdir}/{output_prefix}.metadata.json"
         self.abundance_file = f"{self.subdir}/{tmp_prefix}_abundance.txt"
         self.genomes_file = f"{self.subdir}/{tmp_prefix}_genomes.fasta"
         self.clean_slate()
@@ -141,7 +141,6 @@ def output_summary_counters(rc, iss_command, counters, accumulators, **extra_met
         "fastqs": [os.path.basename(f) for f in rc.output_files],
         "iss_command": iss_command,
         "iss_version": rc.iss_version,
-        "idseq_bench_command": rc.idseq_bench_command,
         "idseq_bench_version": __version__,
         "prefix": os.path.basename(rc.subdir),
         "verified_total_reads": total_reads,
@@ -233,12 +232,14 @@ def create_benchmark(benchmark_config):
     tmp_prefix = f"tmp_{pid}"
     ticker = ProgressTracker(target=overall_reads)
     for model in benchmark_config['models']:
-        # Then generate a multiplexed benchmark.
-        output_path = run_iss_multiplexed(genomes, num_reads, model, tmp_prefix, num_cpus, benchmark_config['abundance'], description=benchmark_config['description'])
-        ticker.advance(num_reads)
+      # Then generate a multiplexed benchmark.
+      output_path = run_iss_multiplexed(genomes, num_reads, model, tmp_prefix, num_cpus, abundance=benchmark_config['abundance'], description=benchmark_config['description'])
+      ticker.advance(num_reads)
 
-        with open(f'{output_path}/{output_path}.yaml', 'w') as output_file:
-            yaml.dump(benchmark_config, output_file, default_flow_style=False)
+      model_benchmark_config = benchmark_config.copy()
+      model_benchmark_config['models'] = [model]
+      with open(f'{output_path}/{output_path}.config.yaml', 'w') as output_file:
+          yaml.dump(model_benchmark_config, output_file, default_flow_style=False)
 
 
 def initialize_genomes(genome_configs):
