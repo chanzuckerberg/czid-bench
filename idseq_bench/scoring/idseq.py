@@ -1,11 +1,11 @@
 import json
 import re
 from collections import defaultdict
-from sklearn.metrics import average_precision_score
 import numpy as np
+from smart_open import open as smart_open
 from idseq_bench.util import smart_glob
 from idseq_bench.parsers import extract_accession_id, extract_fast_file_type_from_path
-from smart_open import open as smart_open
+from .metrics import adjusted_aupr
 
 STORE = 's3://'
 ENV_DIR = f"{{store}}idseq-samples-{{env}}"
@@ -189,6 +189,7 @@ def hit_summary_counts_per_benchmark_lineage(idseq_file_manager, db_type, counte
   return counters
 
 def hit_summary_counts_per_tax_id(idseq_file_manager, db_type):
+  print(f" * Counting hits per tax id for {db_type}")
   counters = defaultdict(lambda: defaultdict(int))
   for entry in idseq_file_manager.post_assembly_hit_summary_entries(db_type, skip_benchmark_lineage=True):
     for rank, tax_id in entry['hit_summary_lineage'].items():
@@ -235,7 +236,7 @@ def count_hits_per_tax_id(idseq_file_manager):
   counts_nr = hit_summary_counts_per_tax_id(idseq_file_manager, 'NR')
   return counts_nt, counts_nr
 
-def score_benchmark(project_id, sample_id, pipeline_version, local_path=None):
+def score_benchmark(project_id, sample_id, pipeline_version, local_path=None, force_monotonic=False):
   idseq_file_manager = IDseqSampleFileManager(project_id, sample_id, pipeline_version, local_path=local_path)
 
   print(" * Counting reads from input files")
@@ -293,7 +294,7 @@ def score_benchmark(project_id, sample_id, pipeline_version, local_path=None):
         {'tax_id': tax_id, 'abs_abundance': counts}
         for tax_id, counts in bench_hit_counters.items()
       ]
-      sample_level_metrics = metrics_per_sample(idseq_hit_counters, truth_taxa)
+      sample_level_metrics = metrics_per_sample(idseq_hit_counters, truth_taxa, force_monotonic=force_monotonic)
       stats_per_db_type.update(sample_level_metrics)
 
     stats_concordance = {}
@@ -310,7 +311,7 @@ def score_benchmark(project_id, sample_id, pipeline_version, local_path=None):
 
   return stats
 
-def metrics_per_sample(hit_counters, truth_taxa):
+def metrics_per_sample(hit_counters, truth_taxa, force_monotonic=False):
   stats = {}
 
   total_simulated_taxa = len(truth_taxa)
@@ -326,16 +327,15 @@ def metrics_per_sample(hit_counters, truth_taxa):
   stats['precision'] = precision
   stats['f1-score'] = 2 * recall * precision / (recall + precision)
 
-  # AUC
+  # AUPR - Area Under Precision and Recall curve
   tax_ids = hit_counters.keys()
   benchmark_tax_ids_set = set(taxon['tax_id'] for taxon in truth_taxa)
-  max_abundance = max(hit_counters.values())
-  y_true = [1 if tax_id in benchmark_tax_ids_set else 0 for tax_id in tax_ids]
-  probas_pred = [hit_counters[tax_id]/max_abundance for tax_id in tax_ids]
-  average_precision = average_precision_score(y_true, probas_pred)
-  stats['aupr'] = average_precision
-  # In case we want to plot the curve for plotting the curve
-  # precision, recall, thresholds = precision_recall_curve(y_true, probas_pred)
+  missed_tax_ids = [tax_id for tax_id in benchmark_tax_ids_set if tax_id not in tax_ids]
+  y_true = [1 if tax_id in benchmark_tax_ids_set else 0 for tax_id in tax_ids] + [1] * len(missed_tax_ids)
+  total_sum = sum(hit_counters.values())
+  y_score = [hit_counters[tax_id] / total_sum for tax_id in tax_ids] + [0] * len(missed_tax_ids)
+  aupr_results = adjusted_aupr(y_true, y_score, force_monotonic=force_monotonic)
+  stats['aupr'] = aupr_results["aupr"]
 
   total_benchmark_reads = sum(taxon['abs_abundance'] for taxon in truth_taxa)
   relative_abundances_diff = [
@@ -349,7 +349,8 @@ def metrics_per_sample(hit_counters, truth_taxa):
 
   return stats
 
-def score_sample(project_id, sample_id, pipeline_version, truth_taxa, local_path=None):
+
+def score_sample(project_id, sample_id, pipeline_version, truth_taxa, local_path=None, force_monotonic=False):
   idseq_file_manager = IDseqSampleFileManager(project_id, sample_id, pipeline_version, local_path=local_path)
   hit_counters_nt, hit_counters_nr = count_hits_per_tax_id(idseq_file_manager)
 
@@ -359,6 +360,6 @@ def score_sample(project_id, sample_id, pipeline_version, truth_taxa, local_path
   for rank in ranks:
     stats_per_rank = stats['per_rank'].setdefault(rank, {})
     for db_type, hit_counters in zip(['NT', 'NR'], [hit_counters_nt, hit_counters_nr]):
-      stats_per_rank[db_type] = metrics_per_sample(hit_counters[rank], truth_taxa[rank])
+      stats_per_rank[db_type] = metrics_per_sample(hit_counters[rank], truth_taxa[rank], force_monotonic=force_monotonic)
 
   return stats
