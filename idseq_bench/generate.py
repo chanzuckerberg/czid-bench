@@ -44,13 +44,13 @@ class ISSRunContext:
   def __init__(self, tmp_prefix, output_prefix):
     print(f"GENERATING {output_prefix}")
     if ISSRunContext.iss_version == None:
-        ISSRunContext.iss_version = get_iss_version()
+      ISSRunContext.iss_version = get_iss_version()
     self.idseq_bench_command = f"{os.path.basename(sys.argv[0])} {' '.join(sys.argv[1:])}"
     self.subdir = output_prefix
     self.output_files = self.paired_files(output_prefix, "fastq.gz")
     self.tmp_files = self.paired_files(tmp_prefix, "fastq")
     self.summary_file_txt = f"{self.subdir}/summary.txt"
-    self.metadata_file_json = f"{self.subdir}/{output_prefix}.metadata.json"
+    self.metadata_file_json = f"{self.subdir}/metadata.json"
     self.abundance_file = f"{self.subdir}/{tmp_prefix}_abundance.txt"
     self.genomes_file = f"{self.subdir}/{tmp_prefix}_genomes.fasta"
     self.clean_slate()
@@ -233,7 +233,7 @@ def create_benchmark(benchmark_config):
 
     model_benchmark_config = benchmark_config.copy()
     model_benchmark_config['models'] = [model]
-    with open(f'{output_path}/{output_path}.config.yaml', 'w') as output_file:
+    with open(f'{output_path}/{output_path}.yaml', 'w') as output_file:
       yaml.dump(model_benchmark_config, output_file, default_flow_style=False)
 
 
