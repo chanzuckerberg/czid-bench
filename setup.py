@@ -6,7 +6,7 @@ https://github.com/pypa/sampleproject
 """
 
 from os import path
-from setuptools import setup
+from setuptools import setup, find_packages
 import idseq_bench
 
 local = path.abspath(path.dirname(__file__))
@@ -50,7 +50,7 @@ setup(
             'idseq-bench-score=idseq_bench.score:main',
         ],
     },
-    packages=['idseq_bench'],
+    packages=find_packages(),
     project_urls={
         'Docs': 'https://github.com/chanzuckerberg/idseq-bench',
         'Bug Reports': 'https://github.com/chanzuckerberg/idseq-bench/issues',
