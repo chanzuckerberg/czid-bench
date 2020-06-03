@@ -65,15 +65,15 @@ class IDseqSampleFileManager():
 
   def set_directory_vars(self):
     # this enables benchmark scoring to work with both SFN-WDL and original filepaths
-    env_dir = f"{{store}}idseq-samples-{{env}}"
-    samples_dir = f"{env_dir}/samples/{{project_id}}/{{sample_id}}"
+    env_dir = f"{self.store}idseq-samples-{self.env}"
+    samples_dir = f"{env_dir}/samples/{self.project_id}/{self.sample_id}"
     self.input_fastq_file_pattern = rf"{samples_dir}/fastqs/.+\.(?:fast|f)q(?:\..+)?"
 
-    results_dir = f"{samples_dir}/results/{{pipeline_version}}"
-    post_process_dir = f"{samples_dir}/postprocess/{{pipeline_version}}/assembly"
+    results_dir = f"{samples_dir}/results/{self.pipeline_version}"
+    post_process_dir = f"{samples_dir}/postprocess/{self.pipeline_version}/assembly"
 
-    if(len(smart_ls(self.apply_context(results_dir))) == 0):
-      results_dir = f"{samples_dir}/results/idseq-prod-main-1/wdl-1/dag-{{pipeline_version}}"
+    if(len(smart_ls(results_dir)) == 0):
+      results_dir = f"{samples_dir}/results/idseq-prod-main-1/wdl-1/dag-{self.pipeline_version}"
       self.post_assembly_summary_files = {
         'NT': f"{results_dir}/gsnap.hitsummary2.tab",
         'NR': f"{results_dir}/rapsearch2.hitsummary2.tab"
@@ -85,17 +85,6 @@ class IDseqSampleFileManager():
       }
 
     self.post_qc_fasta_file_pattern = rf"{results_dir}/gsnap_filter_[12]\.fa(?:sta)?"
-
-   
-  def apply_context(self, format_str):
-    return format_str.format(
-      store=self.store,
-      env=self.env,
-      project_id=self.project_id,
-      sample_id=self.sample_id,
-      pipeline_version=self.pipeline_version
-    )
-
 
   @staticmethod
   def parse_benchmark_lineage(line):
@@ -147,7 +136,7 @@ class IDseqSampleFileManager():
 
   def post_assembly_hit_summary_entries(self, db_type, skip_benchmark_lineage=False):
     return self.hit_summary_entries(
-      self.apply_context(self.post_assembly_summary_files[db_type]),
+      self.post_assembly_summary_files[db_type],
       skip_benchmark_lineage=skip_benchmark_lineage
     )
 
@@ -187,10 +176,10 @@ class IDseqSampleFileManager():
       raise
 
   def input_files(self):
-    return smart_glob(self.apply_context(self.input_fastq_file_pattern), expected_num_files=[1, 2])
+    return smart_glob(self.input_fastq_file_pattern, expected_num_files=[1, 2])
 
   def post_qc_files(self):
-    return smart_glob(self.apply_context(self.post_qc_fasta_file_pattern), expected_num_files=[1, 2])
+    return smart_glob(self.post_qc_fasta_file_pattern, expected_num_files=[1, 2])
 
 def lineage_key(lineage_dict):
   return "{species}:{genus}:{family}".format(**lineage_dict)
