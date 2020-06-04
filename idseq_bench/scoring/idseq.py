@@ -3,22 +3,11 @@ import re
 from collections import defaultdict
 import numpy as np
 from smart_open import open as smart_open
-from idseq_bench.util import smart_glob
+from idseq_bench.util import smart_glob, smart_ls
 from idseq_bench.parsers import extract_accession_id, extract_fast_file_type_from_path
 from .metrics import adjusted_aupr
 
 STORE = 's3://'
-ENV_DIR = f"{{store}}idseq-samples-{{env}}"
-SAMPLES_DIR = f"{ENV_DIR}/samples/{{project_id}}/{{sample_id}}"
-RESULTS_DIR = f"{SAMPLES_DIR}/results/{{pipeline_version}}"
-POST_PROCESS_DIR = f"{SAMPLES_DIR}/postprocess/{{pipeline_version}}"
-
-INPUT_FASTQ_FILE_PATTERN = rf"{SAMPLES_DIR}/fastqs/.+\.(?:fast|f)q(?:\..+)?"
-POST_QC_FASTA_FILE_PATTERN = rf"{RESULTS_DIR}/gsnap_filter_[12]\.fa(?:sta)?"
-POST_ASSEMBLY_SUMMARY_FILES = {
-  'NT': f"{POST_PROCESS_DIR}/assembly/gsnap.hitsummary2.tab",
-  'NR': f"{POST_PROCESS_DIR}/assembly/rapsearch2.hitsummary2.tab"
-}
 
 HIT_SUMMARY_READ_ID = r"^(?P<read_id>.*?)\t"
 BENCHMARK_LINEAGE_PATTERN = r"__benchmark_lineage_(?P<subspecies>\d+)_(?P<species>\d+)_(?P<genus>\d+)_(?P<family>\d+)__"
@@ -26,6 +15,7 @@ IDSEQ_LINEAGE_HIT_SUMMARY_PATTERN = r"\t(?P<species>-?\d+)\t(?P<genus>-?\d+)\t(?
 RANKS = ['species', 'genus', 'family']
 
 FAST_FILE_TYPE = r"\.(?:fast|f)(?P<type>q|a)(?:\.|$)"
+
 
 class MalformedBenchmarkLineageException(Exception):
   def __init__(self, line):
@@ -71,15 +61,30 @@ class IDseqSampleFileManager():
     self.pipeline_version = pipeline_version
     self.env = env
     self.store = local_path or STORE
+    self.set_directory_vars()
 
-  def apply_context(self, format_str):
-    return format_str.format(
-      store=self.store,
-      env=self.env,
-      project_id=self.project_id,
-      sample_id=self.sample_id,
-      pipeline_version=self.pipeline_version
-    )
+  def set_directory_vars(self):
+    # this enables benchmark scoring to work with both SFN-WDL and original filepaths
+    env_dir = f"{self.store}idseq-samples-{self.env}"
+    samples_dir = f"{env_dir}/samples/{self.project_id}/{self.sample_id}"
+    self.input_fastq_file_pattern = rf"{samples_dir}/fastqs/.+\.(?:fast|f)q(?:\..+)?"
+
+    results_dir = f"{samples_dir}/results/{self.pipeline_version}"
+    post_process_dir = f"{samples_dir}/postprocess/{self.pipeline_version}/assembly"
+
+    if(len(smart_ls(results_dir)) == 0):
+      results_dir = f"{samples_dir}/results/idseq-prod-main-1/wdl-1/dag-{self.pipeline_version}"
+      self.post_assembly_summary_files = {
+        'NT': f"{results_dir}/gsnap.hitsummary2.tab",
+        'NR': f"{results_dir}/rapsearch2.hitsummary2.tab"
+      }
+    else:
+      self.post_assembly_summary_files = {
+        'NT': f"{post_process_dir}/gsnap.hitsummary2.tab",
+        'NR': f"{post_process_dir}/rapsearch2.hitsummary2.tab"
+      }
+
+    self.post_qc_fasta_file_pattern = rf"{results_dir}/gsnap_filter_[12]\.fa(?:sta)?"
 
   @staticmethod
   def parse_benchmark_lineage(line):
@@ -131,7 +136,7 @@ class IDseqSampleFileManager():
 
   def post_assembly_hit_summary_entries(self, db_type, skip_benchmark_lineage=False):
     return self.hit_summary_entries(
-      self.apply_context(POST_ASSEMBLY_SUMMARY_FILES[db_type]),
+      self.post_assembly_summary_files[db_type],
       skip_benchmark_lineage=skip_benchmark_lineage
     )
 
@@ -171,10 +176,10 @@ class IDseqSampleFileManager():
       raise
 
   def input_files(self):
-    return smart_glob(self.apply_context(INPUT_FASTQ_FILE_PATTERN), expected_num_files=[1, 2])
+    return smart_glob(self.input_fastq_file_pattern, expected_num_files=[1, 2])
 
   def post_qc_files(self):
-    return smart_glob(self.apply_context(POST_QC_FASTA_FILE_PATTERN), expected_num_files=[1, 2])
+    return smart_glob(self.post_qc_fasta_file_pattern, expected_num_files=[1, 2])
 
 def lineage_key(lineage_dict):
   return "{species}:{genus}:{family}".format(**lineage_dict)
