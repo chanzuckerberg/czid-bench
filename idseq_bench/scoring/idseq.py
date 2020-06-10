@@ -59,7 +59,7 @@ class IDseqSampleFileManager():
     self.project_id = project_id
     self.sample_id = sample_id
     self.pipeline_version = pipeline_version
-    self.env = env
+    self.env = env or 'prod'
     self.store = local_path or STORE
     self.set_directory_vars()
 
