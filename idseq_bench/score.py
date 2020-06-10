@@ -41,7 +41,7 @@ def main():
   )
   parser.add_argument(
     '-e', '--env', type=str, dest='env',
-    help='String name of environment in which sample exists; options are: prod, staging'
+    help='String name of environment in which sample exists; options are: prod (default), staging'
   )
   parser.add_argument(
     '-p', '--local-path', type=str, dest='local_path',
