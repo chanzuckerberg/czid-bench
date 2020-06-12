@@ -40,6 +40,10 @@ def main():
     help='Space separated list of truth files. Truth files are TSV files with the fields <tax_id, absolute abundance, relative abundance, rank, tax_name>'
   )
   parser.add_argument(
+    '-e', '--env', type=str, dest='env',
+    help='String name of environment in which sample exists; options are: prod (default), staging'
+  )
+  parser.add_argument(
     '-p', '--local-path', type=str, dest='local_path',
     help='Root of local path where IDseq files are stored. Must follow the same structure to store files as IDseq'
   )
@@ -52,9 +56,9 @@ def main():
   stats_json = None
   if args.truth_files:
     truth_taxa = extract_truth(args.truth_files)
-    stats_json = score_sample(args.project_id, args.sample_id, args.pipeline_version, truth_taxa, local_path=args.local_path, force_monotonic=args.mono_aupr)
+    stats_json = score_sample(args.project_id, args.sample_id, args.pipeline_version, truth_taxa, env=args.env, local_path=args.local_path, force_monotonic=args.mono_aupr)
   else:
-    stats_json = score_benchmark(args.project_id, args.sample_id, args.pipeline_version, local_path=args.local_path, force_monotonic=args.mono_aupr)
+    stats_json = score_benchmark(args.project_id, args.sample_id, args.pipeline_version, env=args.env, local_path=args.local_path, force_monotonic=args.mono_aupr)
 
   if stats_json:
     args.output_file.write(json.dumps(stats_json, indent=2))

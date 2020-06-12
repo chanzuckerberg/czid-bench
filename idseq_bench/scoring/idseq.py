@@ -59,7 +59,7 @@ class IDseqSampleFileManager():
     self.project_id = project_id
     self.sample_id = sample_id
     self.pipeline_version = pipeline_version
-    self.env = env
+    self.env = env or 'prod'
     self.store = local_path or STORE
     self.set_directory_vars()
 
@@ -73,7 +73,7 @@ class IDseqSampleFileManager():
     post_process_dir = f"{samples_dir}/postprocess/{self.pipeline_version}/assembly"
 
     if(len(smart_ls(results_dir)) == 0):
-      results_dir = f"{samples_dir}/results/idseq-prod-main-1/wdl-1/dag-{self.pipeline_version}"
+      results_dir = f"{samples_dir}/results/idseq-{self.env}-main-1/wdl-1/dag-{self.pipeline_version}"
       self.post_assembly_summary_files = {
         'NT': f"{results_dir}/gsnap.hitsummary2.tab",
         'NR': f"{results_dir}/rapsearch2.hitsummary2.tab"
@@ -241,8 +241,8 @@ def count_hits_per_tax_id(idseq_file_manager):
   counts_nr = hit_summary_counts_per_tax_id(idseq_file_manager, 'NR')
   return counts_nt, counts_nr
 
-def score_benchmark(project_id, sample_id, pipeline_version, local_path=None, force_monotonic=False):
-  idseq_file_manager = IDseqSampleFileManager(project_id, sample_id, pipeline_version, local_path=local_path)
+def score_benchmark(project_id, sample_id, pipeline_version, env='prod', local_path=None, force_monotonic=False):
+  idseq_file_manager = IDseqSampleFileManager(project_id, sample_id, pipeline_version, env=env, local_path=local_path)
 
   print(" * Counting reads from input files")
   input_reads_by_tax_id = count_reads_per_benchmark_lineage(idseq_file_manager, idseq_file_manager.input_files())
@@ -355,8 +355,8 @@ def metrics_per_sample(hit_counters, truth_taxa, force_monotonic=False):
   return stats
 
 
-def score_sample(project_id, sample_id, pipeline_version, truth_taxa, local_path=None, force_monotonic=False):
-  idseq_file_manager = IDseqSampleFileManager(project_id, sample_id, pipeline_version, local_path=local_path)
+def score_sample(project_id, sample_id, pipeline_version, truth_taxa, env='prod', local_path=None, force_monotonic=False):
+  idseq_file_manager = IDseqSampleFileManager(project_id, sample_id, pipeline_version, env=env, local_path=local_path)
   hit_counters_nt, hit_counters_nr = count_hits_per_tax_id(idseq_file_manager)
 
   stats = {'per_rank': {}}
