@@ -37,7 +37,7 @@ setup(
     py_modules=['idseq-bench'],
     python_requires='>=3.6, <4',
     install_requires=[
-        'InSilicoSeq==1.4.2',
+        'InSilicoSeq>=1.4.2',
         'ncbi-acc-download',
         'numpy',
         'scikit-learn',
