@@ -77,7 +77,7 @@ def augment_and_count_read_header(line, line_number):
   serial_number = "s{:010d}".format(line_number // 4)
   g = Genome.by_accid[iss_read_id]
   benchmark_lineage = benchmark_lineage_tag(g)
-  return f"{iss_read_id}__{benchmark_lineage}__{serial_number}\n", g.key
+  return f"@{iss_read_id}__{benchmark_lineage}__{serial_number}\n", g.key
 
 
 def annotate_and_count_reads(input_fastq, output_fastq, counters, accumulators):
@@ -114,15 +114,12 @@ def output_summary_counters(rc, iss_command, counters, accumulators, **extra_met
   with smart_open(rc.summary_file_txt, "w") as mft:
     headers = "READ_COUNT\tREAD_SIZE\tCOVERAGE\tLINEAGE\tGENOME\n"
     mft.write(headers)
-    print("")
-    print(headers)
     for g_key, read_count in sorted(counters.items(), key=lambda pair: pair[1], reverse=True):
       g = Genome.all[g_key]
       benchmark_lineage = benchmark_lineage_tag(g)
       coverage = accumulators[g.key] / g.size
       read_size = accumulators[g.key] / read_count
       summary_line = f"{read_count}\t{read_size}\t{coverage:3.1f}x\t{benchmark_lineage}\t{g.key}\n"
-      print(summary_line)
       mft.write(summary_line)
       contents.append({
         'genome': g.key,
@@ -238,7 +235,6 @@ def create_benchmark(benchmark_config):
 
 
 def initialize_genomes(genome_configs):
-  print(genome_configs)
   return [
     Genome(**genome_config)
     for genome_config in genome_configs
