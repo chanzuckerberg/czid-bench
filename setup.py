@@ -1,4 +1,4 @@
-"""Packaging for idseq-bench module.
+"""Packaging for czid-bench module.
 
 References:
 https://packaging.python.org/guides/distributing-packages-using-setuptools/
@@ -7,7 +7,7 @@ https://github.com/pypa/sampleproject
 
 from os import path
 from setuptools import setup, find_packages
-import idseq_bench
+import czid_bench
 
 local = path.abspath(path.dirname(__file__))
 
@@ -16,16 +16,16 @@ with open(path.join(local, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    name='idseq-bench',
+    name='czid-bench',
     # Versions should comply with PEP 440:
     # https://www.python.org/dev/peps/pep-0440/
-    version=idseq_bench.__version__,
+    version=czid_bench.__version__,
     description='Tools to create and scores MGS benchmarks',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/chanzuckerberg/idseq-bench',
+    url='https://github.com/chanzuckerberg/czid-bench',
     author='Chan Zuckerberg Initiative',
-    author_email='help@idseq.net',
+    author_email='help@czid.org',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Metagenomic Researchers',
@@ -33,8 +33,8 @@ setup(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
     ],
-    keywords='idseq benchmark metrics',
-    py_modules=['idseq-bench'],
+    keywords='czid benchmark metrics',
+    py_modules=['czid-bench'],
     python_requires='>=3.6, <4',
     install_requires=[
         'InSilicoSeq>=1.4.2',
@@ -45,15 +45,15 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'idseq-bench-compare=idseq_bench.compare:main',
-            'idseq-bench-generate=idseq_bench.generate:main',
-            'idseq-bench-score=idseq_bench.score:main',
+            'czid-bench-compare=idseq_bench.compare:main',
+            'czid-bench-generate=idseq_bench.generate:main',
+            'czid-bench-score=idseq_bench.score:main',
         ],
     },
     packages=find_packages(),
     project_urls={
-        'Docs': 'https://github.com/chanzuckerberg/idseq-bench',
-        'Bug Reports': 'https://github.com/chanzuckerberg/idseq-bench/issues',
-        'Sign up for IDseq': 'https://idseq.net/',
+        'Docs': 'https://github.com/chanzuckerberg/czid-bench',
+        'Bug Reports': 'https://github.com/chanzuckerberg/czid-bench/issues',
+        'Sign up for IDseq': 'https://czid.org/',
     },
 )

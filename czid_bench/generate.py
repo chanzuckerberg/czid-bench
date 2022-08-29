@@ -9,7 +9,7 @@
 #
 # Usage:
 #
-#    Customize params.py, then run main.py, then use idseq-cli to upload output to idseq.
+#    Customize params.py, then run main.py, then use czid-cli to upload output to idseq.
 #
 import os
 import sys
@@ -45,7 +45,7 @@ class ISSRunContext:
     print(f"GENERATING {output_prefix}")
     if ISSRunContext.iss_version == None:
       ISSRunContext.iss_version = get_iss_version()
-    self.idseq_bench_command = f"{os.path.basename(sys.argv[0])} {' '.join(sys.argv[1:])}"
+    self.czid_bench_command = f"{os.path.basename(sys.argv[0])} {' '.join(sys.argv[1:])}"
     self.subdir = output_prefix
     self.output_files = self.paired_files(output_prefix, "fastq.gz")
     self.tmp_files = self.paired_files(tmp_prefix, "fastq")
@@ -84,7 +84,7 @@ def annotate_and_count_reads(input_fastq, output_fastq, counters, accumulators):
   """Annotate read IDs by appending the consecutive read counter, after stripping
   that _1 or _2  paired-end indicator appended by ISS.  Required to run correctly
   through STAR.  Also annotate with lineage information, that can later be used
-  to score idseq accuracy."""
+  to score czid accuracy."""
   with smart_open(input_fastq, "r") as input_f, smart_open(output_fastq, "w") as output_f:
     line_number = 1
     try:
@@ -136,7 +136,7 @@ def output_summary_counters(rc, iss_command, counters, accumulators, **extra_met
     "fastqs": [os.path.basename(f) for f in rc.output_files],
     "iss_command": iss_command,
     "iss_version": rc.iss_version,
-    "idseq_bench_version": __version__,
+    "czid_bench_version": __version__,
     "prefix": os.path.basename(rc.subdir),
     "verified_total_reads": total_reads,
     "verified_contents": contents
