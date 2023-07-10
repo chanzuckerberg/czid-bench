@@ -41,13 +41,14 @@ setup(
         'ncbi-acc-download',
         'numpy',
         'scikit-learn',
-        'smart_open'
+        'smart_open',
+        'pyyaml'
     ],
     entry_points={
         'console_scripts': [
-            'czid-bench-compare=idseq_bench.compare:main',
-            'czid-bench-generate=idseq_bench.generate:main',
-            'czid-bench-score=idseq_bench.score:main',
+            'czid-bench-compare=czid_bench.compare:main',
+            'czid-bench-generate=czid_bench.generate:main',
+            'czid-bench-score=czid_bench.score:main',
         ],
     },
     packages=find_packages(),

@@ -52,7 +52,7 @@ class HitCounters:
 
 
 class IDseqSampleFileManager():
-  """Manage download of files from IDseq
+  """Manage download of files from CZ ID
   """
 
   def __init__(self, project_id, sample_id, pipeline_version, env='prod', local_path=None):

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# IDseq Benchmark Generator.
+# CZ ID Benchmark Generator.
 #
 # Prerequsites:
 #
@@ -214,7 +214,7 @@ def run_iss_multiplexed(genomes, num_reads, model, tmp_prefix, num_cpus, abundan
 
 
 def create_benchmark(benchmark_config):
-  print("Generating IDseq benchmark data...")
+  print("Generating CZ ID benchmark data...")
   genomes = initialize_genomes(benchmark_config['genomes'])
   num_cpus = cpu_count()
   num_reads = benchmark_config['reads_per_organism'] * len(genomes)
