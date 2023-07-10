@@ -11,10 +11,10 @@ CZ ID is an unbiased global software platform that helps scientists identify pat
 A collaborative open project of [Chan Zuckerberg Initiative](https://www.chanzuckerberg.com/) and [Chan Zuckerberg Biohub](https://czbiohub.org).
 
 Check out our repositories:
-- [czid-web](https://github.com/chanzuckerberg/idseq-web) - Frontend portal
-- [czid-workflows](https://github.com/chanzuckerberg/idseq-workflows) - Bioinformatics workflows
-- [czid-cli](https://github.com/chanzuckerberg/idseq-cli-v2) - Command line upload interface
-- [czid-bench](https://github.com/chanzuckerberg/idseq-bench) - Pipeline benchmarking tools (here)
+- [czid-web](https://github.com/chanzuckerberg/czid-web) - Frontend portal
+- [czid-workflows](https://github.com/chanzuckerberg/czid-workflows) - Bioinformatics workflows
+- [czid-cli](https://github.com/chanzuckerberg/czid-cli) - Command line upload interface
+- [czid-bench](https://github.com/chanzuckerberg/czid-bench) - Pipeline benchmarking tools (here)
 
 # czid-bench
 Benchmark generator for the [CZ ID Portal](https://czid.org).
@@ -124,7 +124,7 @@ An even more detailed summary, including all ISS options, is generated in json f
 Just upload an output folder to `s3://czid-bench/<next-number>` and add
 an entry for it to `s3://czid-bench/config.json` to specify frequency and environments in which that test should run.
 
-## scoring an CZ ID Portal Run
+## scoring a CZ ID Portal Run
 
 After a benchmark sample has completed running through the CZ ID Portal, the QC pass rate and recall per benchmark organism can be scored by running, e.g.,
 ```
