@@ -1,9 +1,8 @@
-# [IDseq](https://idseq.net/) &middot; [![GitHub license](https://img.shields.io/badge/license-MIT-brightgreen.svg)](https://github.com/chanzuckerberg/idseq-web/blob/master/LICENSE) ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
+# [CZ ID](https://czid.org/) &middot; [![GitHub license](https://img.shields.io/badge/license-MIT-brightgreen.svg)](https://github.com/chanzuckerberg/czid-web/blob/master/LICENSE) ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
 
-![logo](https://assets.idseq.net/Logo_Black.png)
 
 #### Infectious Disease Sequencing Platform
-IDseq is an unbiased global software platform that helps scientists identify pathogens in metagenomic sequencing data.
+CZ ID is an unbiased global software platform that helps scientists identify pathogens in metagenomic sequencing data.
 
 - **Discover** - Identify the pathogen landscape
 - **Detect** - Monitor and review potential outbreaks
@@ -12,31 +11,31 @@ IDseq is an unbiased global software platform that helps scientists identify pat
 A collaborative open project of [Chan Zuckerberg Initiative](https://www.chanzuckerberg.com/) and [Chan Zuckerberg Biohub](https://czbiohub.org).
 
 Check out our repositories:
-- [idseq-web](https://github.com/chanzuckerberg/idseq-web) - Frontend portal
-- [idseq-workflows](https://github.com/chanzuckerberg/idseq-workflows) - Bioinformatics workflows
-- [idseq-cli](https://github.com/chanzuckerberg/idseq-cli-v2) - Command line upload interface
-- [idseq-bench](https://github.com/chanzuckerberg/idseq-bench) - Pipeline benchmarking tools (here)
+- [czid-web](https://github.com/chanzuckerberg/czid-web) - Frontend portal
+- [czid-workflows](https://github.com/chanzuckerberg/czid-workflows) - Bioinformatics workflows
+- [czid-cli](https://github.com/chanzuckerberg/czid-cli) - Command line upload interface
+- [czid-bench](https://github.com/chanzuckerberg/czid-bench) - Pipeline benchmarking tools (here)
 
-# idseq-bench
-Benchmark generator for the [IDseq Portal](https://idseq.net).
+# czid-bench
+Benchmark generator for the [CZ ID Portal](https://czid.org).
 
 So far just a thin wrapper around [InSilicoSeq](https://insilicoseq.readthedocs.io/en/latest/).
 
 ## setup
 ```
-pip3 install git+https://github.com/chanzuckerberg/idseq-bench.git --upgrade
+pip3 install git+https://github.com/chanzuckerberg/czid-bench.git --upgrade
 ```
 
 ## running
 ```
-idseq-bench-generate config_file.yaml
+czid-bench-generate config_file.yaml
 ```
 
-This produces zipped fastq files and config files to generate them. You can upload the fastq files to the [IDseq Portal](https://idseq.net) via [IDSEQ-CLI](https://github.com/chanzuckerberg/idseq-cli).
+This produces zipped fastq files and config files to generate them. You can upload the fastq files to the [CZ ID Portal](https://czid.org) via [IDSEQ-CLI](https://github.com/chanzuckerberg/czid-cli).
 
 ## help
 ```
-idseq-bench-generate -h
+czid-bench-generate -h
 ```
 
 
@@ -97,7 +96,7 @@ norg_6__nacc_27__uniform_weight_per_organism__hiseq_reads__v0.1.0__[R1, R2].fast
 
 We generate a summary file for each pair of fastqs, indicating read counts per organism,
 and the average coverage of the organism's genome.  Each pair counts as 2 reads / 300 bases,
-matching InSilicoSeq and IDseq conventions.
+matching InSilicoSeq and CZ ID conventions.
 ```
 READS  COVERAGE    LINEAGE                                          GENOME
 ----------------------------------------------------------------------------------------------------------------------
@@ -120,16 +119,16 @@ scoring results.  We assume the pipelines would not cheat by inspecting those ta
 
 An even more detailed summary, including all ISS options, is generated in json format.
 
-## For IDseq developers: automated testing of IDseq Portal
+## For CZ ID developers: automated testing of CZ ID Portal
 
-Just upload an output folder to `s3://idseq-bench/<next-number>` and add
-an entry for it to `s3://idseq-bench/config.json` to specify frequency and environments in which that test should run.
+Just upload an output folder to `s3://czid-bench/<next-number>` and add
+an entry for it to `s3://czid-bench/config.json` to specify frequency and environments in which that test should run.
 
-## scoring an IDseq Portal Run
+## scoring a CZ ID Portal Run
 
-After a benchmark sample has completed running through the IDseq Portal, the QC pass rate and recall per benchmark organism can be scored by running, e.g.,
+After a benchmark sample has completed running through the CZ ID Portal, the QC pass rate and recall per benchmark organism can be scored by running, e.g.,
 ```
-idseq-bench-score <project_id> <sample_id> <pipeline_version:major.minor>
+czid-bench-score <project_id> <sample_id> <pipeline_version:major.minor>
 ```
 which produces JSON formatted output like so
 ```
@@ -210,10 +209,10 @@ e.g
 To compare against a ground truth run the scoring script with the following options:
 
 ```
-idseq-bench-score <project_id> <sample_id> <pipeline_version:major.minor> -t <truth_file_1.tsv> <truth_file_2.tsv> ...
+czid-bench-score <project_id> <sample_id> <pipeline_version:major.minor> -t <truth_file_1.tsv> <truth_file_2.tsv> ...
 ```
 
 ## help
 ```
-idseq-bench-score -h
+czid-bench-score -h
 ```
