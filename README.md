@@ -216,3 +216,11 @@ czid-bench-score <project_id> <sample_id> <pipeline_version:major.minor> -t <tru
 ```
 czid-bench-score -h
 ```
+
+## Contributing
+
+This project adheres to the Contributor Covenant code of conduct. By participating, you are expected to uphold this code. Please report unacceptable behavior to opensource@chanzuckerberg.com.
+
+## Security
+
+Please disclose security issues responsibly by contacting security@chanzuckerberg.com.
