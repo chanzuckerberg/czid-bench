@@ -4,7 +4,7 @@ import json
 import re
 import sys
 from os.path import exists
-from .scoring.idseq import score_benchmark, score_sample
+from .scoring.czid import score_benchmark, score_sample
 from .scoring.truth import extract_truth
 
 def pipeline_version(pipeline_version_str):

@@ -3,8 +3,8 @@ import re
 from collections import defaultdict
 import numpy as np
 from smart_open import open as smart_open
-from idseq_bench.util import smart_glob, smart_ls
-from idseq_bench.parsers import extract_accession_id, extract_fast_file_type_from_path
+from czid_bench.util import smart_glob, smart_ls
+from czid_bench.parsers import extract_accession_id, extract_fast_file_type_from_path
 from .metrics import adjusted_aupr
 
 STORE = 's3://'
@@ -52,7 +52,7 @@ class HitCounters:
 
 
 class IDseqSampleFileManager():
-  """Manage download of files from IDseq
+  """Manage download of files from CZ ID
   """
 
   def __init__(self, project_id, sample_id, pipeline_version, env='prod', local_path=None):
@@ -65,7 +65,7 @@ class IDseqSampleFileManager():
 
   def set_directory_vars(self):
     # this enables benchmark scoring to work with both SFN-WDL and original filepaths
-    env_dir = f"{self.store}idseq-samples-{self.env}"
+    env_dir = f"{self.store}czid-samples-{self.env}"
     samples_dir = f"{env_dir}/samples/{self.project_id}/{self.sample_id}"
     self.input_fastq_file_pattern = rf"{samples_dir}/fastqs/.+\.(?:fast|f)q(?:\..+)?"
 
@@ -73,7 +73,7 @@ class IDseqSampleFileManager():
     post_process_dir = f"{samples_dir}/postprocess/{self.pipeline_version}/assembly"
 
     if(len(smart_ls(results_dir)) == 0):
-      results_dir = f"{samples_dir}/results/idseq-{self.env}-main-1/wdl-1/dag-{self.pipeline_version}"
+      results_dir = f"{samples_dir}/results/czid-{self.env}-main-1/wdl-1/dag-{self.pipeline_version}"
       self.post_assembly_summary_files = {
         'NT': f"{results_dir}/gsnap.hitsummary2.tab",
         'NR': f"{results_dir}/rapsearch2.hitsummary2.tab"
@@ -187,71 +187,71 @@ def lineage_key(lineage_dict):
 def key_to_lineage(key):
   return {k: int(v) for k, v in zip(["species", "genus", "family"], key.split(":"))}
 
-def hit_summary_counts_per_benchmark_lineage(idseq_file_manager, db_type, counters=None):
+def hit_summary_counts_per_benchmark_lineage(czid_file_manager, db_type, counters=None):
   counters = counters or HitCounters()
-  for entry in idseq_file_manager.post_assembly_hit_summary_entries(db_type):
+  for entry in czid_file_manager.post_assembly_hit_summary_entries(db_type):
     counters.increment(entry['benchmark_lineage'], entry['hit_summary_lineage'])
   return counters
 
-def hit_summary_counts_per_tax_id(idseq_file_manager, db_type):
+def hit_summary_counts_per_tax_id(czid_file_manager, db_type):
   print(f" * Counting hits per tax id for {db_type}")
   counters = defaultdict(lambda: defaultdict(int))
-  for entry in idseq_file_manager.post_assembly_hit_summary_entries(db_type, skip_benchmark_lineage=True):
+  for entry in czid_file_manager.post_assembly_hit_summary_entries(db_type, skip_benchmark_lineage=True):
     for rank, tax_id in entry['hit_summary_lineage'].items():
       counters[rank][tax_id] += 1
   return counters
 
-def hit_summary_concordance(idseq_file_manager):
+def hit_summary_concordance(czid_file_manager):
   concordance_counters = defaultdict(int)
   hit_by_read_id = {}
   # Loop through both hit summary files simultaneously to take advantage of
   # similarly sorted entries
   for nt_hit_summary_entry, nr_hit_summary_entry in zip(
-      idseq_file_manager.post_assembly_hit_summary_entries('NT'),
-      idseq_file_manager.post_assembly_hit_summary_entries('NR')
+      czid_file_manager.post_assembly_hit_summary_entries('NT'),
+      czid_file_manager.post_assembly_hit_summary_entries('NR')
     ):
-    nt_idseq_lineage, nt_read_id = nt_hit_summary_entry['hit_summary_lineage'], nt_hit_summary_entry['read_id']
-    nr_idseq_lineage, nr_read_id = nr_hit_summary_entry['hit_summary_lineage'], nr_hit_summary_entry['read_id']
-    for idseq_lineage, read_id in zip([nt_idseq_lineage, nr_idseq_lineage], [nt_read_id, nr_read_id]):
+    nt_czid_lineage, nt_read_id = nt_hit_summary_entry['hit_summary_lineage'], nt_hit_summary_entry['read_id']
+    nr_czid_lineage, nr_read_id = nr_hit_summary_entry['hit_summary_lineage'], nr_hit_summary_entry['read_id']
+    for czid_lineage, read_id in zip([nt_idseq_lineage, nr_idseq_lineage], [nt_read_id, nr_read_id]):
       if read_id in hit_by_read_id:
-        for rank, tax_id in idseq_lineage.items():
+        for rank, tax_id in czid_lineage.items():
           if hit_by_read_id[read_id][rank] == tax_id:
             concordance_counters[tax_id] += 1
         del hit_by_read_id[read_id]
       else:
-        hit_by_read_id[read_id] = idseq_lineage
+        hit_by_read_id[read_id] = czid_lineage
   return concordance_counters
 
 
-def count_reads_per_benchmark_lineage(idseq_file_manager, fastx_files):
+def count_reads_per_benchmark_lineage(czid_file_manager, fastx_files):
   counters = {}
   for fastx_file in fastx_files:
-    for entry in idseq_file_manager.fastx_iterator(fastx_file):
+    for entry in czid_file_manager.fastx_iterator(fastx_file):
       for _, tax_id in entry['lineage'].items():
         counters[tax_id] = counters.get(tax_id, 0) + 1
   return counters
 
-def count_hits_per_benchmark_lineage(idseq_file_manager):
-  counts_nt = hit_summary_counts_per_benchmark_lineage(idseq_file_manager, 'NT')
-  counts_nr = hit_summary_counts_per_benchmark_lineage(idseq_file_manager, 'NR')
+def count_hits_per_benchmark_lineage(czid_file_manager):
+  counts_nt = hit_summary_counts_per_benchmark_lineage(czid_file_manager, 'NT')
+  counts_nr = hit_summary_counts_per_benchmark_lineage(czid_file_manager, 'NR')
   return counts_nt, counts_nr
 
-def count_hits_per_tax_id(idseq_file_manager):
-  counts_nt = hit_summary_counts_per_tax_id(idseq_file_manager, 'NT')
-  counts_nr = hit_summary_counts_per_tax_id(idseq_file_manager, 'NR')
+def count_hits_per_tax_id(czid_file_manager):
+  counts_nt = hit_summary_counts_per_tax_id(czid_file_manager, 'NT')
+  counts_nr = hit_summary_counts_per_tax_id(czid_file_manager, 'NR')
   return counts_nt, counts_nr
 
 def score_benchmark(project_id, sample_id, pipeline_version, env='prod', local_path=None, force_monotonic=False):
-  idseq_file_manager = IDseqSampleFileManager(project_id, sample_id, pipeline_version, env=env, local_path=local_path)
+  czid_file_manager = IDseqSampleFileManager(project_id, sample_id, pipeline_version, env=env, local_path=local_path)
 
   print(" * Counting reads from input files")
-  input_reads_by_tax_id = count_reads_per_benchmark_lineage(idseq_file_manager, idseq_file_manager.input_files())
+  input_reads_by_tax_id = count_reads_per_benchmark_lineage(czid_file_manager, idseq_file_manager.input_files())
   print(" * Counting reads from post qc files")
-  post_qc_reads_by_tax_id = count_reads_per_benchmark_lineage(idseq_file_manager, idseq_file_manager.post_qc_files())
+  post_qc_reads_by_tax_id = count_reads_per_benchmark_lineage(czid_file_manager, idseq_file_manager.post_qc_files())
   print(" * Counting hits per benchmark lineage")
-  hit_counters_nt, hit_counters_nr = count_hits_per_benchmark_lineage(idseq_file_manager)
+  hit_counters_nt, hit_counters_nr = count_hits_per_benchmark_lineage(czid_file_manager)
   print(" * Counting corcordant hits per taxon id")
-  concordance_by_tax_id = hit_summary_concordance(idseq_file_manager)
+  concordance_by_tax_id = hit_summary_concordance(czid_file_manager)
   stats = {
     'per_rank': {}
   }
@@ -288,18 +288,18 @@ def score_benchmark(project_id, sample_id, pipeline_version, env='prod', local_p
         'value': total_correct_reads_per_db_type/total_post_qc_reads_per_rank
       }
 
-      idseq_hit_counters = defaultdict(int)
+      czid_hit_counters = defaultdict(int)
       bench_hit_counters = defaultdict(int)
-      for bench_tax_id, idseq_hits in benchmark_hits.items():
-        for idseq_tax_id, counts in idseq_hits.items():
-          idseq_hit_counters[idseq_tax_id] += counts
+      for bench_tax_id, czid_hits in benchmark_hits.items():
+        for czid_tax_id, counts in idseq_hits.items():
+          czid_hit_counters[idseq_tax_id] += counts
           bench_hit_counters[bench_tax_id] += counts
 
       truth_taxa = [
         {'tax_id': tax_id, 'abs_abundance': counts}
         for tax_id, counts in bench_hit_counters.items()
       ]
-      sample_level_metrics = metrics_per_sample(idseq_hit_counters, truth_taxa, force_monotonic=force_monotonic)
+      sample_level_metrics = metrics_per_sample(czid_hit_counters, truth_taxa, force_monotonic=force_monotonic)
       stats_per_db_type.update(sample_level_metrics)
 
     stats_concordance = {}
@@ -356,8 +356,8 @@ def metrics_per_sample(hit_counters, truth_taxa, force_monotonic=False):
 
 
 def score_sample(project_id, sample_id, pipeline_version, truth_taxa, env='prod', local_path=None, force_monotonic=False):
-  idseq_file_manager = IDseqSampleFileManager(project_id, sample_id, pipeline_version, env=env, local_path=local_path)
-  hit_counters_nt, hit_counters_nr = count_hits_per_tax_id(idseq_file_manager)
+  czid_file_manager = IDseqSampleFileManager(project_id, sample_id, pipeline_version, env=env, local_path=local_path)
+  hit_counters_nt, hit_counters_nr = count_hits_per_tax_id(czid_file_manager)
 
   stats = {'per_rank': {}}
 
