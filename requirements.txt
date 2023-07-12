@@ -1,7 +1,7 @@
 biopython==1.74
 certifi==2022.12.7
 chardet==3.0.4
-future==0.17.1
+future==0.18.3
 idna==2.8
 InSilicoSeq==1.4.2
 joblib==1.2.0
